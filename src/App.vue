@@ -63,10 +63,11 @@
         user_all_lsls: [],
         user_all_means: [],
         user_all_sigmas: [],
-        chartLeftMarginBlankWidth: 110,
-        chartRightMarginBlankWidth: 110,
+        chartLeftMarginBlankWidth: 70,
+        chartRightMarginBlankWidth: 150,
         simulateDemoFlag: false,
-        chartWholeShowFlag: false
+        chartWholeShowFlag: false,
+        houxuanColors: [],
       }
     },
     watch: {},
@@ -95,8 +96,26 @@
 
       window.onresize = this.rearrangeShowElementsByWindowResize;
 
-      this.simulateInitData();
+      this.houxuanColors = [];
+      this.houxuanColors[0] = '#008000';
+      this.houxuanColors[1] = '#FFA500';
+      this.houxuanColors[2] = '#FF4500';
+      this.houxuanColors[3] = '#9400D3';
+      this.houxuanColors[4] = '#7B68EE';
+      this.houxuanColors[5] = '#008B8B';
+      this.houxuanColors[6] = '#8B4513';
+      this.houxuanColors[7] = '#0887FF';
+      this.houxuanColors[8] = '#808000';
+      this.houxuanColors[9] = '#8B0000';
+      this.houxuanColors[10] = '#5F9EA0';
 
+      var arr = this.houxuanColors.map(function (item) {
+        return item;
+      });
+
+      this.houxuanColors = this.houxuanColors.concat(arr);
+
+      this.simulateInitData();
     },
 
     methods: {
@@ -122,7 +141,8 @@
 
         this.preDefineColorArr = [];
         for (var i = 0; i < this.spcFeaturesArr.length; i++) {
-          this.preDefineColorArr.push(this.randomHexColor());
+          //this.preDefineColorArr.push(this.randomHexColor());
+          this.preDefineColorArr.push(this.houxuanColors[i]);
         }
 
         this.simulateDemoFlag = true;
@@ -195,7 +215,8 @@
           this.user_all_sigmas = basicSetupData.sigma.split(",");
           this.preDefineColorArr = [];
           for (var i = 0; i < this.spcFeaturesArr.length; i++) {
-            this.preDefineColorArr.push(this.randomHexColor());
+            //this.preDefineColorArr.push(this.randomHexColor());
+            this.preDefineColorArr.push(this.houxuanColors[i]);
           }
         }
 
@@ -214,15 +235,15 @@
 
           let featureName = this.spcFeaturesArr[k];
 
-          let usl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_usls[k]);
+          let usl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_usls[k].toFixed(4));
 
-          let lsl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[k]);
+          let lsl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[k].toFixed(4));
 
-          let mean_middle_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[k]);
+          let mean_middle_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[k].toFixed(4));
 
-          let mean_high_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[k] + this.user_all_sigmas[k]);
+          let mean_high_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] + this.user_all_sigmas[k]).toFixed(4));
 
-          let mean_low_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[k] - this.user_all_sigmas[k]);
+          let mean_low_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] - this.user_all_sigmas[k]).toFixed(4));
 
           let time_data_arr = this.chartDateTimeArr;
 
@@ -255,7 +276,7 @@
         return arr;
       },
 
-      getAimOptionForECharts(pointedColor,chartRealWidth, featureName, time_data_arr, real_data_arr, usl, lsl, mean_middle, mean_high, mean_low) {
+      getAimOptionForECharts(pointedColor, chartRealWidth, featureName, time_data_arr, real_data_arr, usl, lsl, mean_middle, mean_high, mean_low) {
         //color: ['#FFA500','#FF0000','#FF00FF','#FFFF00','#000000','#0000ff'],
         // pointedColor = '#FFA500'
         this.option = {
@@ -271,8 +292,9 @@
             textStyle: {
               color: '#000',
               align: 'left',
-              fontFamily:'Verdana'
-            }
+              fontFamily: 'Verdana'
+            },
+            formatter: '{b0}<br />{a0}:{c0}'
           },
           legend: {
             itemHeight: 7,
@@ -309,6 +331,9 @@
               textStyle: {
                 color: '#000'
               }
+            },
+            splitLine: {
+              show: false
             }
           }],
           yAxis: [{
@@ -325,38 +350,47 @@
           series: [{
             name: featureName,
             type: 'line',
-            symbol: 'none',
+            showSymbol:false,
+            lineStyle: {
+              width: 3
+            },
             data: real_data_arr
           },
-            {
-              name: 'USL',
-              type: 'line',
-              symbol: 'none',
-              data: usl,
-              markPoint: {
-                symbol: 'circle',
-                symbolSize: 1,
-                symbolOffset: [chartRealWidth, 0],
-                label: {
-                  show: true,
-                  color: '#000',
-                  fontSize: 14,
-                  align: 'left',
-                  padding: [0, 0, 0, 15],
-                  formatter: 'USL'
-                },
-                data: [
-                  {
-                    type: 'max'
-                  }
-                ]
-              }
+          {
+            name: 'USL',
+            type: 'line',
+            data: usl,
+            symbol:'none',
+            lineStyle: {
+              width: 1
             },
+            markPoint: {
+              symbol: 'circle',
+              symbolSize: 1,
+              symbolOffset: [chartRealWidth, 0],
+              label: {
+                show: true,
+                color: '#000',
+                fontSize: 14,
+                align: 'left',
+                padding: [0, 0, 0, 15],
+                formatter: 'USL : ' + usl[0]
+              },
+              data: [
+                {
+                  type: 'max'
+                }
+              ]
+            }
+          },
             {
               name: 'LSL',
               type: 'line',
-              symbol: 'none',
               data: lsl,
+              symbol:'none',
+              lineStyle: {
+                width:1
+              },
               markPoint: {
                 symbol: 'circle',
                 symbolSize: 1,
@@ -367,7 +401,7 @@
                   fontSize: 14,
                   align: 'left',
                   padding: [0, 0, 0, 15],
-                  formatter: 'LSL'
+                  formatter: 'LSL : ' + lsl[0]
                 },
                 data: [
                   {
@@ -380,8 +414,12 @@
             {
               name: 'mean+3σ',
               type: 'line',
-              symbol: 'none',
               data: mean_high,
+              symbol:'none',
+              lineStyle: {
+                width: 1,
+                type:'dashed'
+              },
               markPoint: {
                 symbol: 'circle',
                 symbolSize: 1,
@@ -392,7 +430,7 @@
                   fontSize: 14,
                   align: 'left',
                   padding: [0, 0, 0, 15],
-                  formatter: 'mean+3σ'
+                  formatter: 'mean+3σ : ' + mean_high[0]
                 },
                 data: [
                   {
@@ -405,8 +443,12 @@
             {
               name: 'mean',
               type: 'line',
-              symbol: 'none',
               data: mean_middle,
+              symbol:'none',
+              lineStyle: {
+                width: 1,
+                type:'dashed'
+              },
               markPoint: {
                 symbol: 'circle',
                 symbolSize: 1,
@@ -417,7 +459,7 @@
                   fontSize: 14,
                   align: 'left',
                   padding: [0, 0, 0, 15],
-                  formatter: 'mean'
+                  formatter: 'mean : ' + mean_middle[0]
                 },
                 data: [
                   {
@@ -430,8 +472,12 @@
             {
               name: 'mean-3σ',
               type: 'line',
-              symbol: 'none',
               data: mean_low,
+              symbol:'none',
+              lineStyle: {
+                width: 1,
+                type:'dashed'
+              },
               markPoint: {
                 symbol: 'circle',
                 symbolSize: 1,
@@ -443,7 +489,7 @@
                   fontFamily: 'Microsoft YaHei',
                   align: 'left',
                   padding: [0, 0, 0, 15],
-                  formatter: 'mean-3σ'
+                  formatter: 'mean-3σ : ' + mean_low[0]
                 },
                 data: [
                   {
