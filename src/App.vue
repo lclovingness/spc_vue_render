@@ -13,14 +13,15 @@
     </div>
 
     <div id="container" class="m-huabu">
-      <div id="sonTitle" v-show="spcFeaturesArr.length>0">
-        <!--<span class="m-selectBoxes">当前图表显示：-->
+      <div id="sonTitle" v-show="!initFirstFlag">
+        <span class="m-selectBoxes">当前图表显示：
 
-        <!--<Select v-model="currentViewFeaturesList" multiple style="width:180px;text-align:left" @on-change="ddddd">-->
-          <!--<Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{ item }}</Option>-->
-        <!--</Select>-->
+        <Select v-model="currentViewFeaturesList" multiple style="width:180px;text-align:left" @on-change="echoSelectChangedHandler"
+                ref ="mySelectEntity">
+          <Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{ item }}</Option>
+        </Select>
 
-        <!--</span>-->
+        </span>
 
         <span>自定义同时显示数据点的数量：
         <Input v-model="showAtTheSameTimeSpotNums" style="width: 40px"
@@ -29,7 +30,7 @@
         </span>
       </div>
       <div v-for="(item,index) in spcFeaturesArr">
-        <hr style="margin-top:20px;margin-bottom:20px;height:1px;border:none;border-top:1px ridge gray;"/>
+        <hr style="margin-top:20px;margin-bottom:20px;height:1px;border:none;border-top:1px ridge gray;" v-show="!initFirstFlag"/>
         <br>
         <div :id="'chart_'+index" class="m-spcChart"></div>
         <div v-show="chartWholeShowFlag">
@@ -39,8 +40,9 @@
             <span class="u-onec-label">Cpk: {{latestAllCpk[index]}}</span>
           </span>
           <span class="m-usl-lsl-label">
-                自定义 —— LSL: <Input v-model="user_all_lsls[index]" style="width: 40px;margin-right:20px" @on-focus="selectHighlightInputContent"></Input>USL:
-            <Input v-model="user_all_usls[index]" style="width: 40px" @on-focus="selectHighlightInputContent"></Input>
+                自定义 —— LSL: <Input v-model="user_all_lsls[index]" style="width: 60px;margin-right:20px"
+                                   @on-focus="selectHighlightInputContent"></Input>USL:
+            <Input v-model="user_all_usls[index]" style="width: 60px" @on-focus="selectHighlightInputContent"></Input>
               <Button
                 size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="sendBackAfterSomeParasChanged(index)">
                 点击更新
@@ -89,6 +91,7 @@
         houxuanColors: [],
         bak_spcFeaturesArr:[],
         initFirstFlag:true,
+        defaultLabel:'—— All Features ——'
       }
     },
     watch: {
@@ -101,7 +104,7 @@
       let host = window.location.host;
       let wsServer = 'ws://' + host + '/';
 
-      //wsServer = 'ws://spc12312.neuseer.cn/'
+      //wsServer = 'ws://myspc.neuseer.cn/'
 
       let Socket = 'MozWebSocket' in window ? MozWebSocket : WebSocket;
 
@@ -151,21 +154,21 @@
 
       this.houxuanColors = this.houxuanColors.concat(arr);
 
-      this.simulateInitData();
+      //this.simulateInitData();
     },
 
     methods: {
 
-      ddddd(arr){
+      echoSelectChangedHandler(arr){
 
-        if(arr.find((element) => (element == '--All Features--')))
+        if(arr.find((element) => (element == this.defaultLabel)))
         {
-          if(arr[0] == '--All Features--' && arr.length >1)
+          if(arr[0] == this.defaultLabel && arr.length >1)
           {
             arr.shift();
           }
 
-          if(arr[arr.length-1] == '--All Features--' && arr.length >1){
+          if(arr[arr.length-1] == this.defaultLabel && arr.length >1){
             while(arr.length>1)
             {
               arr.shift();
@@ -173,37 +176,52 @@
           }
 
         }else if(arr.length == 0){
-          arr.push();
+
+          arr.push(this.defaultLabel);
+
         }
 
-        console.log(this.currentViewFeaturesList);
+        this.$refs.mySelectEntity.hideMenu(); // 这里是直接调用组件里的方法
       },
 
       renewDrawCharts(){
 
-        console.log("this.initFirstFlag="+this.initFirstFlag);
+        /*
+        recvdata: {"LSL": "[-1.2099789994074721, -1.0985858278838847]", "USL": "[-1.1189420812338151, -0.7057414610631854]", "NUM": "100", "FeatureList": "['generator_speed', 'power']", "sigma": "[0.015172819695609525, 0.06547406113678321]", "mean": "[-1.1644605403206436, -0.902163644473535]"}
+         */
+
+        //
+
+        //console.log("this.initFirstFlag="+this.initFirstFlag);
 
         if(this.initFirstFlag) return;
 
-        // for(var i=0;i<this.spcFeaturesArr.length;i++)
-        // {
-        //   let chartDom = this.d('chart_' + i);
-        //   let currentChart = echarts.init(chartDom);
-        //   alert(currentChart);
-        //   currentChart.clear();
-        // }
-
-        if (this.currentViewFeaturesList.length == 1 && this.currentViewFeaturesList[0] == '--All Features--') {
+        if (this.currentViewFeaturesList.length == 1 && this.currentViewFeaturesList[0] == this.defaultLabel) {
           this.spcFeaturesArr = this.bak_spcFeaturesArr.map((item) => {return item});
         } else {
           this.spcFeaturesArr = this.currentViewFeaturesList.map((item) => {return item});
+          let arr = [];
+
+          for(var i=0;i<this.bak_spcFeaturesArr.length;i++)
+          {
+
+            for(var j=0;j<this.spcFeaturesArr.length;j++)
+            {
+              if(this.bak_spcFeaturesArr[i] == this.spcFeaturesArr[j])
+              {
+                arr.push(this.bak_spcFeaturesArr[i]);
+              }
+            }
+
+          }
+
+          this.spcFeaturesArr = arr.map((item) => {return item});
 
         }
 
-        console.log("-----"+this.spcFeaturesArr.toString());
+        //console.log("-----"+this.spcFeaturesArr.toString());
         setTimeout(this.readyForDrawSPCCharts, 500);
 
-        //this.readyForDrawSPCCharts();
       },
 
       selectHighlightInputContent(evt_firefox){
@@ -219,13 +237,13 @@
         this.spcFeaturesArr = ["wind_direction", "generator_speed"];
         this.bak_spcFeaturesArr = ["wind_direction", "generator_speed"];
         //this.spcFeaturesAddAllOptionArr = ['创建应用时配置的所有特征参数'];
-        this.spcFeaturesAddAllOptionArr = ['--All Features--'];
+        this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
         for(var i=0;i<this.spcFeaturesArr.length;i++)
         {
           this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
         }
         //this.spcFeaturesAddAllOptionArr = this.spcFeaturesArr.concat(['创建应用时配置所有特征参数']);
-        this.currentViewFeaturesList = ['--All Features--'];
+        this.currentViewFeaturesList = [this.defaultLabel];
 
         this.showAtTheSameTimeSpotNums = 9;
         this.chartDateTimeArr = ["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
@@ -237,9 +255,9 @@
         this.latestAllCp = [13.45667, 20.76575].map((item) => {return item.toFixed(2)});
         this.latestAllCpk = [15.41431, 18.523453253].map((item) => {return item.toFixed(2)});
         this.user_all_usls = [95, 90];
-        this.user_all_lsls = [-10, -30];
-        this.user_all_means = [45.63465464356, 39.634564].map((item) => {return Number(item.toFixed(2))});
-        this.user_all_sigmas = [27.63645636, 10.9999988888].map((item) => {return Number(item.toFixed(2))});
+        this.user_all_lsls = [-40, -30];
+        this.user_all_means = [35.63465464356, 39.634564].map((item) => {return Number(item.toFixed(2))});
+        this.user_all_sigmas = [20.63645636, 10.9999988888].map((item) => {return Number(item.toFixed(2))});
 
         this.d('tempHinterLayer').style.display = "none";
 
@@ -287,7 +305,7 @@
       updateReceivedData(recvData) {
         console.log('recvdata:', recvData);
 
-        return;
+        //return;
 
 
         if (recvData.indexOf("datetime") > -1) {
@@ -296,13 +314,31 @@
 
           this.chartDateTimeArr.push(realData.datetime);
 
-          this.latestAllDataArr.push(realData.data);
+          let darr = realData.data.slice(1,-1).split(",");
 
-          this.latestAllCa = realData.Ca.map((item) => {return item.toFixed(2)});
+          for(var j=0;j<darr.length;j++)
+          {
+            darr[j] = Number(darr[j]);
+          }
 
-          this.latestAllCp = realData.Cp.map((item) => {return item.toFixed(2)});
+          this.latestAllDataArr.push(darr);
 
-          this.latestAllCpk = realData.Cpk.map((item) => {return item.toFixed(2)});
+          let ca = realData.Ca.slice(1,-1).split(",");
+          let cp = realData.Cp.slice(1,-1).split(",");
+          let cpk = realData.Cpk.slice(1,-1).split(",");
+
+          for(var i=0;i<ca.length;i++)
+          {
+            ca[i] = Number(ca[i]);
+            cp[i] = Number(cp[i]);
+            cpk[i] = Number(cpk[i]);
+          }
+
+          this.latestAllCa = ca.map((item) => {return item.toFixed(2)});
+          //
+          this.latestAllCp = cp.map((item) => {return item.toFixed(2)});
+          //
+          this.latestAllCpk = cpk.map((item) => {return item.toFixed(2)});
 
           console.log(this.latestAllCa + "~~~~" + this.latestAllCa.length);
 
@@ -315,22 +351,62 @@
 
           this.initFirstFlag = false;
 
+          this.d('tempHinterLayer').style.display = "none";
+
         }
 
+
         if (recvData.indexOf("FeatureList") > -1) {
-          this.d('tempHinterLayer').style.display = "none";
+
           let basicSetupData = JSON.parse(recvData);
+
           this.showAtTheSameTimeSpotNums = Number(basicSetupData.NUM);
-          this.spcFeaturesArr = basicSetupData.FeatureList.split(",");
 
-          this.bak_spcFeaturesArr = basicSetupData.FeatureList.split(",");
+          let featureArr = basicSetupData.FeatureList.slice(1,-1).split(",");
 
+          for(var k=0;k<featureArr.length;k++)
+          {
+            if(k==0)
+            {
+              featureArr[k] = featureArr[k].slice(1,-1);
+            } else {
+              featureArr[k] = featureArr[k].slice(2,-1);
+            }
 
-          this.user_all_usls = basicSetupData.USL.split(",");
-          this.user_all_lsls = basicSetupData.LSL.split(",");
-          this.user_all_means = basicSetupData.mean.split(",");
-          this.user_all_sigmas = basicSetupData.sigma.split(",");
+          }
+
+          this.spcFeaturesArr = featureArr;
+
+          this.bak_spcFeaturesArr = featureArr;
+
+          this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
+          for(var i=0;i<this.spcFeaturesArr.length;i++)
+          {
+            this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
+          }
+          this.currentViewFeaturesList = [this.defaultLabel];
+
+          this.user_all_usls = basicSetupData.USL.slice(1,-1).split(",");
+          this.user_all_lsls = basicSetupData.LSL.slice(1,-1).split(",");
+          this.user_all_means = basicSetupData.mean.slice(1,-1).split(",");
+          this.user_all_sigmas = basicSetupData.sigma.slice(1,-1).split(",");
+
+          for(var i=0;i<this.user_all_usls.length;i++)
+          {
+            this.user_all_usls[i] = Number(this.user_all_usls[i]).toFixed(2);
+            this.user_all_lsls[i] = Number(this.user_all_lsls[i]).toFixed(2);
+            this.user_all_means[i] = Number(this.user_all_means[i]).toFixed(2);
+            this.user_all_sigmas[i] = Number(this.user_all_sigmas[i]).toFixed(2);
+          }
+
+          // console.log("this.spcFeaturesArr="+this.spcFeaturesArr+"~~~~~"+this.spcFeaturesArr.length);
+          // console.log("this.user_all_usls="+this.user_all_usls+"~~~~~"+this.user_all_usls.length);
+          // console.log("this.user_all_lsls="+this.user_all_lsls+"~~~~~"+this.user_all_lsls.length);
+          // console.log("this.user_all_means="+this.user_all_means+"~~~~~"+this.user_all_means.length);
+          // console.log("this.user_all_sigmas="+this.user_all_sigmas+"~~~~~"+this.user_all_sigmas.length);
+
           this.preDefineColorArr = [];
+
           for (var i = 0; i < this.spcFeaturesArr.length; i++) {
             //this.preDefineColorArr.push(this.randomHexColor());
             this.preDefineColorArr.push(this.houxuanColors[i]);
@@ -350,17 +426,31 @@
 
           let featureName = this.spcFeaturesArr[k];
 
-          let usl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_usls[k]);
+          let targetIndex;
 
-          let lsl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[k]);
+          for(var x=0;x<this.bak_spcFeaturesArr.length;x++)
+          {
+            if(featureName == this.bak_spcFeaturesArr[x])
+            {
+              targetIndex = x;
+            }
+          }
 
-          let mean_middle_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[k]);
+          let usl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_usls[targetIndex]);
 
-          let mean_high_markline_value =
-            new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] + this.user_all_sigmas[k]).toFixed(2));
+          let lsl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[targetIndex]);
 
-          let mean_low_markline_value =
-            new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] - this.user_all_sigmas[k]).toFixed(2));
+          let mean_middle_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[targetIndex]);
+
+          let xx = (Number(this.user_all_means[targetIndex]) +Number(2*this.user_all_sigmas[targetIndex])).toFixed(2);
+
+          let mean_high_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(xx);
+
+          //let mean_high_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(2);
+
+          let yy = (Number(this.user_all_means[targetIndex]) - Number(2*this.user_all_sigmas[targetIndex])).toFixed(2);
+
+          let mean_low_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(yy);
 
           let time_data_arr = this.chartDateTimeArr;
 
@@ -368,15 +458,15 @@
           let real_data_arr;
 
           if (this.simulateDemoFlag) {
-            real_data_arr = this.latestAllDataArr[k];
+            real_data_arr = this.latestAllDataArr[targetIndex];
           } else {
-            real_data_arr = this.recombineMapArr(k);
+            real_data_arr = this.recombineMapArr(targetIndex);
           }
 
           let exceedLimitDataArr =
             this.highlightBeyondUSLOrLSLData(real_data_arr,usl_markline_value[0],lsl_markline_value[0])
 
-          let pointedColor = this.preDefineColorArr[k];
+          let pointedColor = this.preDefineColorArr[targetIndex];
 
           currentChart.resize();
 
@@ -491,12 +581,11 @@
 
           }],
           series: [
-
             {
               name: featureName,
               type: 'line',
               symbol:'roundRect',
-              symbolSize:10,
+              symbolSize:8,
               showSymbol: false,
               lineStyle: {
                 width: 3
@@ -504,7 +593,7 @@
               data: real_data_arr,
               markPoint:{
                 symbol: 'circle',
-                symbolSize: 12,
+                symbolSize: 6,
                 data:exceedLimitDataArr,
                 animation:true,
                 animationDuration:500
