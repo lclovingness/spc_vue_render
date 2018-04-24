@@ -13,28 +13,45 @@
     </div>
 
     <div id="container" class="m-huabu">
-      <div id="sonTitle" v-show="spcFeaturesArr.length>0">自定义同时显示数据点的数量：
-        <Input v-model="showAtTheSameTimeSpotNums" style="width: 40px"></Input> 个
+      <div id="sonTitle" v-show="spcFeaturesArr.length>0">
+        <!--<span class="m-selectBoxes">当前图表显示：-->
+
+        <!--<Select v-model="currentViewFeaturesList" multiple style="width:180px;text-align:left" @on-change="ddddd">-->
+          <!--<Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{ item }}</Option>-->
+        <!--</Select>-->
+
+        <!--</span>-->
+
+        <span>自定义同时显示数据点的数量：
+        <Input v-model="showAtTheSameTimeSpotNums" style="width: 40px"
+               @on-focus="selectHighlightInputContent"></Input> 个
         <Button size="default" type="primary" class="m-updateNumBtn" @click="readyForUpdateNumValue">点击更新</Button>
+        </span>
       </div>
       <div v-for="(item,index) in spcFeaturesArr">
-        <hr style="margin-top:20px;margin-bottom:20px;height:2px;border:none;border-top:2px ridge gray;"/>
+        <hr style="margin-top:20px;margin-bottom:20px;height:1px;border:none;border-top:1px ridge gray;"/>
         <br>
         <div :id="'chart_'+index" class="m-spcChart"></div>
-        <div v-show="chartWholeShowFlag">Ca: {{latestAllCa[index]}}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Cp:
-          {{latestAllCp[index]}}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Cpk:
-          {{latestAllCpk[index]}}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          <span>自定义 —— LSL: <Input v-model="user_all_lsls[index]" style="width: 40px"
-          ></Input>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;USL: <Input
-            v-model="user_all_usls[index]" style="width: 40px"></Input></span>
-          <Button
-            size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="sendBackAfterSomeParasChanged(index)">
-            点击更新
-          </Button>
+        <div v-show="chartWholeShowFlag">
+          <span class="m-ca-cp-cpk-label">
+            <span class="u-onec-label">Ca: {{latestAllCa[index]}}</span>
+            <span class="u-onec-label">Cp: {{latestAllCp[index]}}</span>
+            <span class="u-onec-label">Cpk: {{latestAllCpk[index]}}</span>
+          </span>
+          <span class="m-usl-lsl-label">
+                自定义 —— LSL: <Input v-model="user_all_lsls[index]" style="width: 40px;margin-right:20px" @on-focus="selectHighlightInputContent"></Input>USL:
+            <Input v-model="user_all_usls[index]" style="width: 40px" @on-focus="selectHighlightInputContent"></Input>
+              <Button
+                size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="sendBackAfterSomeParasChanged(index)">
+                点击更新
+              </Button>
+          </span>
         </div>
         <br>
+        <br>
       </div>
-
+      <br>
+      <br>
     </div>
   </div>
 </template>
@@ -49,6 +66,8 @@
 
     data() {
       return {
+        spcFeaturesAddAllOptionArr:[],
+        currentViewFeaturesList:[],
         ws: null,
         myChart: null,
         spcFeaturesArr: [],
@@ -68,15 +87,30 @@
         simulateDemoFlag: false,
         chartWholeShowFlag: false,
         houxuanColors: [],
+        bak_spcFeaturesArr:[],
+        initFirstFlag:true,
       }
     },
-    watch: {},
+    watch: {
+      currentViewFeaturesList(val, oldVal) {
+        this.renewDrawCharts();
+      },
+
+    },
     mounted: function () {
       let host = window.location.host;
       let wsServer = 'ws://' + host + '/';
+
+      //wsServer = 'ws://spc12312.neuseer.cn/'
+
       let Socket = 'MozWebSocket' in window ? MozWebSocket : WebSocket;
+
       let ownerparent = this;
+
       this.ws = new Socket(wsServer);
+
+      //this.ws = new Object();
+
       this.ws.onerror = function (evt) {
         console.log(evt);
       }
@@ -90,8 +124,10 @@
       };
 
       this.ws.onopen = function () {
+
         console.log('Socked Connected OK');
         ownerparent.execInitSendAction();
+
       };
 
       window.onresize = this.rearrangeShowElementsByWindowResize;
@@ -120,22 +156,90 @@
 
     methods: {
 
+      ddddd(arr){
+
+        if(arr.find((element) => (element == '--All Features--')))
+        {
+          if(arr[0] == '--All Features--' && arr.length >1)
+          {
+            arr.shift();
+          }
+
+          if(arr[arr.length-1] == '--All Features--' && arr.length >1){
+            while(arr.length>1)
+            {
+              arr.shift();
+            }
+          }
+
+        }else if(arr.length == 0){
+          arr.push();
+        }
+
+        console.log(this.currentViewFeaturesList);
+      },
+
+      renewDrawCharts(){
+
+        console.log("this.initFirstFlag="+this.initFirstFlag);
+
+        if(this.initFirstFlag) return;
+
+        // for(var i=0;i<this.spcFeaturesArr.length;i++)
+        // {
+        //   let chartDom = this.d('chart_' + i);
+        //   let currentChart = echarts.init(chartDom);
+        //   alert(currentChart);
+        //   currentChart.clear();
+        // }
+
+        if (this.currentViewFeaturesList.length == 1 && this.currentViewFeaturesList[0] == '--All Features--') {
+          this.spcFeaturesArr = this.bak_spcFeaturesArr.map((item) => {return item});
+        } else {
+          this.spcFeaturesArr = this.currentViewFeaturesList.map((item) => {return item});
+
+        }
+
+        console.log("-----"+this.spcFeaturesArr.toString());
+        setTimeout(this.readyForDrawSPCCharts, 500);
+
+        //this.readyForDrawSPCCharts();
+      },
+
+      selectHighlightInputContent(evt_firefox){
+        let evt = window.event || evt_firefox;
+        evt.target.select();
+      },
+
       rearrangeShowElementsByWindowResize() {
         this.readyForDrawSPCCharts();
       },
 
       simulateInitData() {
         this.spcFeaturesArr = ["wind_direction", "generator_speed"];
+        this.bak_spcFeaturesArr = ["wind_direction", "generator_speed"];
+        //this.spcFeaturesAddAllOptionArr = ['创建应用时配置的所有特征参数'];
+        this.spcFeaturesAddAllOptionArr = ['--All Features--'];
+        for(var i=0;i<this.spcFeaturesArr.length;i++)
+        {
+          this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
+        }
+        //this.spcFeaturesAddAllOptionArr = this.spcFeaturesArr.concat(['创建应用时配置所有特征参数']);
+        this.currentViewFeaturesList = ['--All Features--'];
+
         this.showAtTheSameTimeSpotNums = 9;
         this.chartDateTimeArr = ["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
-        this.latestAllDataArr = [[5, 30, 50, 45, 60, 20, 55, 33, 105], [6, 32, 45, 51, 38, 99, 45, 59, 28]];
-        this.latestAllCa = [11, 12];
-        this.latestAllCp = [13, 20];
-        this.latestAllCpk = [15, 18];
+        this.latestAllDataArr = [[-5.2424242, -30.4214124, -50.254235, 45.85687, 60.745657, 20.474747467, 55.74747476,
+          33.4745757, 105.74674747], [6.7476747, 32.74767475, 45.74764747, 51.74657475, -38.4775757, 99.747657757,
+          45.74757457, 59.7456757,
+          28.435323]];
+        this.latestAllCa = [11.3455666, 12.567890].map((item) => {return item.toFixed(2)});
+        this.latestAllCp = [13.45667, 20.76575].map((item) => {return item.toFixed(2)});
+        this.latestAllCpk = [15.41431, 18.523453253].map((item) => {return item.toFixed(2)});
         this.user_all_usls = [95, 90];
-        this.user_all_lsls = [5, 11];
-        this.user_all_means = [45, 39];
-        this.user_all_sigmas = [27, 10];
+        this.user_all_lsls = [-10, -30];
+        this.user_all_means = [45.63465464356, 39.634564].map((item) => {return Number(item.toFixed(2))});
+        this.user_all_sigmas = [27.63645636, 10.9999988888].map((item) => {return Number(item.toFixed(2))});
 
         this.d('tempHinterLayer').style.display = "none";
 
@@ -163,7 +267,7 @@
 
       sendBackAfterSomeParasChanged(chartIndex) {
         //alert("this.user_all_usls[chartIndex]="+this.user_all_usls[chartIndex])
-        if (this.simulateDemoFlag) return;
+        //if (this.simulateDemoFlag) return;
         let newObj = {};
         newObj.initcfg = 0;
         newObj.num = this.showAtTheSameTimeSpotNums;
@@ -176,13 +280,15 @@
       },
 
       execInitSendAction() {
-        if (this.simulateDemoFlag) return;
+        //if (this.simulateDemoFlag) return;
         let initSender = '{"initcfg":1}';
         this.ws.send(initSender);
       },
       updateReceivedData(recvData) {
         console.log('recvdata:', recvData);
-        this.d('tempHinterLayer').style.display = "none";
+
+        return;
+
 
         if (recvData.indexOf("datetime") > -1) {
 
@@ -192,23 +298,34 @@
 
           this.latestAllDataArr.push(realData.data);
 
-          this.latestAllCa = realData.Ca.split(",");
+          this.latestAllCa = realData.Ca.map((item) => {return item.toFixed(2)});
 
-          this.latestAllCp = realData.Cp.split(",");
+          this.latestAllCp = realData.Cp.map((item) => {return item.toFixed(2)});
 
-          this.latestAllCpk = realData.Cpk.split(",");
+          this.latestAllCpk = realData.Cpk.map((item) => {return item.toFixed(2)});
+
+          console.log(this.latestAllCa + "~~~~" + this.latestAllCa.length);
 
           if (this.latestAllDataArr.length > this.showAtTheSameTimeSpotNums) {
             this.chartDateTimeArr.shift();
             this.latestAllDataArr.shift();
           }
 
+          this.readyForDrawSPCCharts();
+
+          this.initFirstFlag = false;
+
         }
 
         if (recvData.indexOf("FeatureList") > -1) {
+          this.d('tempHinterLayer').style.display = "none";
           let basicSetupData = JSON.parse(recvData);
           this.showAtTheSameTimeSpotNums = Number(basicSetupData.NUM);
           this.spcFeaturesArr = basicSetupData.FeatureList.split(",");
+
+          this.bak_spcFeaturesArr = basicSetupData.FeatureList.split(",");
+
+
           this.user_all_usls = basicSetupData.USL.split(",");
           this.user_all_lsls = basicSetupData.LSL.split(",");
           this.user_all_means = basicSetupData.mean.split(",");
@@ -220,10 +337,8 @@
           }
         }
 
-        this.readyForDrawSPCCharts();
 
       },
-
 
       readyForDrawSPCCharts() {
 
@@ -235,15 +350,17 @@
 
           let featureName = this.spcFeaturesArr[k];
 
-          let usl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_usls[k].toFixed(4));
+          let usl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_usls[k]);
 
-          let lsl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[k].toFixed(4));
+          let lsl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[k]);
 
-          let mean_middle_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[k].toFixed(4));
+          let mean_middle_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[k]);
 
-          let mean_high_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] + this.user_all_sigmas[k]).toFixed(4));
+          let mean_high_markline_value =
+            new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] + this.user_all_sigmas[k]).toFixed(2));
 
-          let mean_low_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] - this.user_all_sigmas[k]).toFixed(4));
+          let mean_low_markline_value =
+            new Array(Number(this.showAtTheSameTimeSpotNums)).fill((this.user_all_means[k] - this.user_all_sigmas[k]).toFixed(2));
 
           let time_data_arr = this.chartDateTimeArr;
 
@@ -256,16 +373,34 @@
             real_data_arr = this.recombineMapArr(k);
           }
 
+          let exceedLimitDataArr =
+            this.highlightBeyondUSLOrLSLData(real_data_arr,usl_markline_value[0],lsl_markline_value[0])
+
           let pointedColor = this.preDefineColorArr[k];
 
           currentChart.resize();
 
-          currentChart.setOption(this.getAimOptionForECharts(pointedColor, currentChart.getWidth() - this.chartLeftMarginBlankWidth - this.chartRightMarginBlankWidth, featureName, time_data_arr,
+          currentChart.setOption(this.getAimOptionForECharts(exceedLimitDataArr,pointedColor, currentChart.getWidth()
+            - this.chartLeftMarginBlankWidth - this.chartRightMarginBlankWidth, featureName, time_data_arr,
             real_data_arr, usl_markline_value, lsl_markline_value, mean_middle_markline_value, mean_high_markline_value, mean_low_markline_value), true);
 
+          setTimeout(this.delay3SecondsReviseAnimation,3000,currentChart);
         }
 
         this.chartWholeShowFlag = true;
+
+        this.initFirstFlag = false;
+      },
+
+      highlightBeyondUSLOrLSLData(dataArr,usl,lsl){
+        let arr = [];
+        for(var i=0;i<dataArr.length;i++)
+        {
+          if(dataArr[i]>usl || dataArr[i]<lsl) {
+            arr.push({'coord': [i, dataArr[i]]});
+          }
+        }
+        return arr;
       },
 
       recombineMapArr(index) {
@@ -276,7 +411,12 @@
         return arr;
       },
 
-      getAimOptionForECharts(pointedColor, chartRealWidth, featureName, time_data_arr, real_data_arr, usl, lsl, mean_middle, mean_high, mean_low) {
+      delay3SecondsReviseAnimation(currentChart){
+        currentChart.setOption({animation:true})
+      },
+
+      getAimOptionForECharts(exceedLimitDataArr,pointedColor, chartRealWidth, featureName, time_data_arr,
+                             real_data_arr, usl, lsl, mean_middle, mean_high, mean_low) {
         //color: ['#FFA500','#FF0000','#FF00FF','#FFFF00','#000000','#0000ff'],
         // pointedColor = '#FFA500'
         this.option = {
@@ -322,6 +462,9 @@
             nameGap: 10,
             boundaryGap: false,
             data: time_data_arr,
+            axisLine:{
+              onZero:false
+            },
             axisLabel: {
               interval: 'auto',
               showMinLabel: true,
@@ -347,49 +490,60 @@
             }
 
           }],
-          series: [{
-            name: featureName,
-            type: 'line',
-            showSymbol:false,
-            lineStyle: {
-              width: 3
-            },
-            data: real_data_arr
-          },
-          {
-            name: 'USL',
-            type: 'line',
-            data: usl,
-            symbol:'none',
-            lineStyle: {
-              width: 1
-            },
-            markPoint: {
-              symbol: 'circle',
-              symbolSize: 1,
-              symbolOffset: [chartRealWidth, 0],
-              label: {
-                show: true,
-                color: '#000',
-                fontSize: 14,
-                align: 'left',
-                padding: [0, 0, 0, 15],
-                formatter: 'USL : ' + usl[0]
+          series: [
+
+            {
+              name: featureName,
+              type: 'line',
+              symbol:'roundRect',
+              symbolSize:10,
+              showSymbol: false,
+              lineStyle: {
+                width: 3
               },
-              data: [
-                {
-                  type: 'max'
-                }
-              ]
-            }
-          },
+              data: real_data_arr,
+              markPoint:{
+                symbol: 'circle',
+                symbolSize: 12,
+                data:exceedLimitDataArr,
+                animation:true,
+                animationDuration:500
+              },
+            },
+            {
+              name: 'USL',
+              type: 'line',
+              data: usl,
+              symbol: 'none',
+              lineStyle: {
+                width: 2
+              },
+              markPoint: {
+                symbol: 'circle',
+                symbolSize: 1,
+                symbolOffset: [chartRealWidth, 0],
+                label: {
+                  show: true,
+                  color: '#000',
+                  fontSize: 14,
+                  align: 'left',
+                  padding: [0, 0, 0, 15],
+                  formatter: 'USL : ' + usl[0]
+                },
+                data: [
+                  {
+                    type: 'max'
+                  }
+                ]
+              }
+            },
             {
               name: 'LSL',
               type: 'line',
               data: lsl,
-              symbol:'none',
+              symbol: 'none',
               lineStyle: {
-                width:1
+                width: 2
               },
               markPoint: {
                 symbol: 'circle',
@@ -415,10 +569,10 @@
               name: 'mean+3σ',
               type: 'line',
               data: mean_high,
-              symbol:'none',
+              symbol: 'none',
               lineStyle: {
                 width: 1,
-                type:'dashed'
+                type: 'dashed'
               },
               markPoint: {
                 symbol: 'circle',
@@ -430,7 +584,7 @@
                   fontSize: 14,
                   align: 'left',
                   padding: [0, 0, 0, 15],
-                  formatter: 'mean+3σ : ' + mean_high[0]
+                  formatter: 'UCL : ' + mean_high[0]
                 },
                 data: [
                   {
@@ -444,10 +598,10 @@
               name: 'mean',
               type: 'line',
               data: mean_middle,
-              symbol:'none',
+              symbol: 'none',
               lineStyle: {
                 width: 1,
-                type:'dashed'
+                type: 'dashed'
               },
               markPoint: {
                 symbol: 'circle',
@@ -459,7 +613,7 @@
                   fontSize: 14,
                   align: 'left',
                   padding: [0, 0, 0, 15],
-                  formatter: 'mean : ' + mean_middle[0]
+                  formatter: 'MEAN : ' + mean_middle[0]
                 },
                 data: [
                   {
@@ -473,10 +627,10 @@
               name: 'mean-3σ',
               type: 'line',
               data: mean_low,
-              symbol:'none',
+              symbol: 'none',
               lineStyle: {
                 width: 1,
-                type:'dashed'
+                type: 'dashed'
               },
               markPoint: {
                 symbol: 'circle',
@@ -489,7 +643,7 @@
                   fontFamily: 'Microsoft YaHei',
                   align: 'left',
                   padding: [0, 0, 0, 15],
-                  formatter: 'mean-3σ : ' + mean_low[0]
+                  formatter: 'LCL : ' + mean_low[0]
                 },
                 data: [
                   {
@@ -515,6 +669,10 @@
     text-align: center;
   }
 
+  .m-selectBoxes{
+    margin-right:70px;
+  }
+
   .m-updateNumBtn {
     margin-left: 15px;
   }
@@ -530,6 +688,22 @@
   .ivu-input {
     font-size: 14px !important;
     text-align: center !important;
+  }
+
+  .m-ca-cp-cpk-label {
+    float: left;
+    margin-left: 70px;
+    font-weight:700;
+  }
+
+  .m-usl-lsl-label{
+    float: right;
+    margin-right: 150px;
+  }
+
+  .u-onec-label {
+    width: 100px;
+    margin-right: 20px;
   }
 
   .titlelay {
