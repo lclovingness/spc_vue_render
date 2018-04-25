@@ -73,7 +73,8 @@
         ws: null,
         myChart: null,
         spcFeaturesArr: [],
-        showAtTheSameTimeSpotNums: 5,
+        showAtTheSameTimeSpotNums: 0,
+        current_showAtTheSameTimeSpotNums:0,
         chartIndex: 0,
         chartDateTimeArr: [],
         latestAllDataArr: [],
@@ -98,13 +99,16 @@
       currentViewFeaturesList(val, oldVal) {
         this.renewDrawCharts();
       },
-
     },
     mounted: function () {
       let host = window.location.host;
       let wsServer = 'ws://' + host + '/';
 
-      //wsServer = 'ws://myspc.neuseer.cn/'
+      console.log("host==="+host);
+      if(host.indexOf("localhost:")>-1 || host === '')
+      {
+        wsServer = 'ws://spc0425.neuseer.cn/'
+      }
 
       let Socket = 'MozWebSocket' in window ? MozWebSocket : WebSocket;
 
@@ -158,6 +162,18 @@
     },
 
     methods: {
+
+      echoChangedForNum()
+      {
+        let oldLength = this.latestAllDataArr.length;
+        if (oldLength > this.showAtTheSameTimeSpotNums) {
+          this.chartDateTimeArr = this.chartDateTimeArr.slice(oldLength - this.showAtTheSameTimeSpotNums);
+          this.latestAllDataArr = this.latestAllDataArr.slice(oldLength - this.showAtTheSameTimeSpotNums);
+        }
+        //console.log(oldLength + "旧的和新的" + this.chartDateTimeArr.length);
+        this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
+        this.readyForDrawSPCCharts();
+      },
 
       echoSelectChangedHandler(arr){
 
@@ -280,6 +296,9 @@
         //alert("fasfa")
         //this.chartDateTimeArr = this.chartDateTimeArr.slice(0, this.showAtTheSameTimeSpotNums);
         //this.latestAllDataArr = this.latestAllDataArr.slice(0, this.showAtTheSameTimeSpotNums);
+
+        this.echoChangedForNum();
+
         this.sendBackAfterSomeParasChanged(0);
       },
 
@@ -287,12 +306,16 @@
         //alert("this.user_all_usls[chartIndex]="+this.user_all_usls[chartIndex])
         //if (this.simulateDemoFlag) return;
         let newObj = {};
-        newObj.initcfg = 0;
-        newObj.num = this.showAtTheSameTimeSpotNums;
-        newObj.idx = chartIndex;
-        newObj.user_usl = this.user_all_usls[chartIndex]
-        newObj.user_lsl = this.user_all_lsls[chartIndex]
 
+        newObj.initcfg = 0;
+
+        newObj.num = this.showAtTheSameTimeSpotNums;
+
+        newObj.idx = chartIndex;
+
+        newObj.user_usl = this.user_all_usls[chartIndex];
+
+        newObj.user_lsl = this.user_all_lsls[chartIndex];
 
         this.ws.send(JSON.stringify(newObj));
       },
@@ -339,9 +362,6 @@
           this.latestAllCp = cp.map((item) => {return item.toFixed(2)});
           //
           this.latestAllCpk = cpk.map((item) => {return item.toFixed(2)});
-
-          console.log(this.latestAllCa + "~~~~" + this.latestAllCa.length);
-
           if (this.latestAllDataArr.length > this.showAtTheSameTimeSpotNums) {
             this.chartDateTimeArr.shift();
             this.latestAllDataArr.shift();
@@ -361,6 +381,8 @@
           let basicSetupData = JSON.parse(recvData);
 
           this.showAtTheSameTimeSpotNums = Number(basicSetupData.NUM);
+
+          this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
 
           let featureArr = basicSetupData.FeatureList.slice(1,-1).split(",");
 
@@ -436,21 +458,20 @@
             }
           }
 
-          let usl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_usls[targetIndex]);
+          let usl_markline_value =
+            new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.user_all_usls[targetIndex]);
 
-          let lsl_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[targetIndex]);
+          let lsl_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[targetIndex]);
 
-          let mean_middle_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(this.user_all_means[targetIndex]);
+          let mean_middle_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.user_all_means[targetIndex]);
 
           let xx = (Number(this.user_all_means[targetIndex]) +Number(2*this.user_all_sigmas[targetIndex])).toFixed(2);
 
-          let mean_high_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(xx);
-
-          //let mean_high_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(2);
+          let mean_high_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(xx);
 
           let yy = (Number(this.user_all_means[targetIndex]) - Number(2*this.user_all_sigmas[targetIndex])).toFixed(2);
 
-          let mean_low_markline_value = new Array(Number(this.showAtTheSameTimeSpotNums)).fill(yy);
+          let mean_low_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(yy);
 
           let time_data_arr = this.chartDateTimeArr;
 
@@ -782,6 +803,7 @@
   .m-ca-cp-cpk-label {
     float: left;
     margin-left: 70px;
+    margin-top:6px;
     font-weight:700;
   }
 
