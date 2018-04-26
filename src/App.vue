@@ -69,7 +69,7 @@
     data() {
       return {
         spcFeaturesAddAllOptionArr:[],
-        currentViewFeaturesList:[],
+        currentViewFeaturesList:['—— All Features ——'],
         ws: null,
         myChart: null,
         spcFeaturesArr: [],
@@ -158,7 +158,7 @@
 
       this.houxuanColors = this.houxuanColors.concat(arr);
 
-      //this.simulateInitData();
+      this.simulateInitData();
     },
 
     methods: {
@@ -262,6 +262,10 @@
         this.currentViewFeaturesList = [this.defaultLabel];
 
         this.showAtTheSameTimeSpotNums = 9;
+
+        this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
+
+
         this.chartDateTimeArr = ["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
         this.latestAllDataArr = [[-5.2424242, -30.4214124, -50.254235, 45.85687, 60.745657, 20.474747467, 55.74747476,
           33.4745757, 105.74674747], [6.7476747, 32.74767475, 45.74764747, 51.74657475, -38.4775757, 99.747657757,
@@ -769,6 +773,9 @@
       },
     },
   }
+  //
+  //@font-face{font-family:Ionicons;src:url(/static/font/ionicons.eot?v=2.0.0);src:url(/static/font/ionicons.eot?v=2.0.0#iefix) format("embedded-opentype"),url(/static/font/ionicons.ttf?v=2.0.0) format("truetype"),url(/static/font/ionicons.woff?v=2.0.0) format("woff"),url(/static/font/ionicons.svg?v=2.0.0#Ionicons)
+
 </script>
 
 <style>
@@ -794,6 +801,7 @@
   #sonTitle {
     font-size: 16px;
   }
+
 
   .ivu-input {
     font-size: 14px !important;
