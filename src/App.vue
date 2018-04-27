@@ -40,11 +40,16 @@
             <span class="u-onec-label">Cpk: {{latestAllCpk[index]}}</span>
           </span>
           <span class="m-usl-lsl-label">
-                自定义 —— LSL: <Input v-model="user_all_lsls[index]" style="width: 60px;margin-right:20px"
-                                   @on-focus="selectHighlightInputContent"></Input>USL:
-            <Input v-model="user_all_usls[index]" style="width: 60px" @on-focus="selectHighlightInputContent"></Input>
+                自定义 —— LSL: <Input v-model="user_all_lsls[index].num" style="width: 60px;margin-right:20px"
+                                   @on-focus="selectHighlightInputContent" number></Input>USL:
+            <Input v-model="user_all_usls[index].num" style="width: 60px;margin-right:20px" @on-focus="selectHighlightInputContent" number></Input>
+            LCL:
+            <Input v-model="user_all_lcls[index].num" style="width: 60px;margin-right:20px"
+                   @on-focus="selectHighlightInputContent" number></Input>
+            UCL:
+            <Input v-model="user_all_ucls[index].num" style="width: 60px" @on-focus="selectHighlightInputContent" number></Input>
               <Button
-                size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="sendBackAfterSomeParasChanged(index)">
+                size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="echoUSLAndSoOnParasChanged(index)">
                 点击更新
               </Button>
           </span>
@@ -68,6 +73,15 @@
 
     data() {
       return {
+        aa:{
+          bb:5
+        },
+        abc:[
+          {fn:11},
+          {fn:22}
+
+        ],
+        w2:'123',
         spcFeaturesAddAllOptionArr:[],
         currentViewFeaturesList:['—— All Features ——'],
         ws: null,
@@ -92,31 +106,49 @@
         houxuanColors: [],
         bak_spcFeaturesArr:[],
         initFirstFlag:true,
-        defaultLabel:'—— All Features ——'
+        defaultLabel:'—— All Features ——',
+        user_all_lcls:[],
+        user_all_ucls:[],
+        old_user_all_lcls:[],
+        old_user_all_ucls:[],
+        usl_happen_changed_flag:false,
+        lsl_happen_changed_flag:false,
+        old_user_all_lsls:[],
+        old_user_all_usls:[],
       }
     },
     watch: {
       currentViewFeaturesList(val, oldVal) {
         this.renewDrawCharts();
       },
+
+      user_all_usls(val, oldVal) {
+        this.usl_happen_changed_flag = true;
+      },
+      user_all_lsls(val, oldVal) {
+        this.lsl_happen_changed_flag = true;
+      }
     },
     mounted: function () {
+
       let host = window.location.host;
+
       let wsServer = 'ws://' + host + '/';
 
-      console.log("host==="+host);
-      if(host.indexOf("localhost:")>-1 || host === '')
-      {
-        wsServer = 'ws://spc0425.neuseer.cn/'
-      }
+      console.log("Socket Server URL: " + wsServer);
 
       let Socket = 'MozWebSocket' in window ? MozWebSocket : WebSocket;
 
       let ownerparent = this;
 
-      this.ws = new Socket(wsServer);
-
-      //this.ws = new Object();
+      if (host.indexOf("localhost:") > -1 || host === '') {
+        this.ws = new Object();
+        this.ws.send = function () {
+        }
+        //this.ws = new Socket('ws://spc0427.neuseer.cn/');
+      } else {
+        this.ws = new Socket(wsServer);
+      }
 
       this.ws.onerror = function (evt) {
         console.log(evt);
@@ -127,12 +159,15 @@
       };
 
       this.ws.onprob = function () {
+
         console.log('Socket connection probd');
+
       };
 
       this.ws.onopen = function () {
 
         console.log('Socked Connected OK');
+
         ownerparent.execInitSendAction();
 
       };
@@ -158,7 +193,7 @@
 
       this.houxuanColors = this.houxuanColors.concat(arr);
 
-      this.simulateInitData();
+      //this.simulateInitData();
     },
 
     methods: {
@@ -197,7 +232,7 @@
 
         }
 
-        this.$refs.mySelectEntity.hideMenu(); // 这里是直接调用组件里的方法
+        this.$refs.mySelectEntity.hideMenu(); // 这里是直接调用 iView Select 组件里的方法
       },
 
       renewDrawCharts(){
@@ -205,10 +240,6 @@
         /*
         recvdata: {"LSL": "[-1.2099789994074721, -1.0985858278838847]", "USL": "[-1.1189420812338151, -0.7057414610631854]", "NUM": "100", "FeatureList": "['generator_speed', 'power']", "sigma": "[0.015172819695609525, 0.06547406113678321]", "mean": "[-1.1644605403206436, -0.902163644473535]"}
          */
-
-        //
-
-        //console.log("this.initFirstFlag="+this.initFirstFlag);
 
         if(this.initFirstFlag) return;
 
@@ -250,8 +281,10 @@
       },
 
       simulateInitData() {
-        this.spcFeaturesArr = ["wind_direction", "generator_speed"];
-        this.bak_spcFeaturesArr = ["wind_direction", "generator_speed"];
+
+        this.spcFeaturesArr = ['wind_direction','generator_speed'];
+
+        this.bak_spcFeaturesArr = ['wind_direction','generator_speed'];
         //this.spcFeaturesAddAllOptionArr = ['创建应用时配置的所有特征参数'];
         this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
         for(var i=0;i<this.spcFeaturesArr.length;i++)
@@ -274,10 +307,27 @@
         this.latestAllCa = [11.3455666, 12.567890].map((item) => {return item.toFixed(2)});
         this.latestAllCp = [13.45667, 20.76575].map((item) => {return item.toFixed(2)});
         this.latestAllCpk = [15.41431, 18.523453253].map((item) => {return item.toFixed(2)});
-        this.user_all_usls = [95, 90];
-        this.user_all_lsls = [-40, -30];
-        this.user_all_means = [35.63465464356, 39.634564].map((item) => {return Number(item.toFixed(2))});
-        this.user_all_sigmas = [20.63645636, 10.9999988888].map((item) => {return Number(item.toFixed(2))});
+        this.user_all_usls = [{num:95}, {num:90}];
+        this.user_all_lsls = [{num:-40}, {num:-30}];
+        this.old_user_all_usls = [{num:95}, {num:90}];
+        this.old_user_all_lsls = [{num:-40}, {num:-30}];
+        this.user_all_means = [{num:35.63465464356}, {num:39.634564}]
+        this.user_all_sigmas = [{num:20.63645636}, {num:10.9999988888}]
+
+        this.user_all_lcls = [];
+        this.user_all_ucls = [];
+        this.old_user_all_lcls = [];
+        this.old_user_all_ucls = [];
+
+        for(var j=0;j<this.user_all_means.length;j++)
+        {
+          let obj_1 = {num:(this.user_all_means[j].num - 2*this.user_all_sigmas[j].num).toFixed(2)}
+          let obj_2 = {num:(this.user_all_means[j].num + 2*this.user_all_sigmas[j].num).toFixed(2)}
+          this.user_all_lcls.push(obj_1);
+          this.user_all_ucls.push(obj_2);
+          this.old_user_all_lcls.push(JSON.parse(JSON.stringify(obj_1)));
+          this.old_user_all_ucls.push(JSON.parse(JSON.stringify(obj_2)));
+        }
 
         this.d('tempHinterLayer').style.display = "none";
 
@@ -292,23 +342,16 @@
         setTimeout(this.readyForDrawSPCCharts, 1000);
       },
 
-      randomHexColor() { //随机生成十六进制颜色
-        return '#' + ('00000' + (Math.random() * 0x1000000 << 0).toString(16)).substr(-6);
-      },
+      // randomHexColor() { //随机生成十六进制颜色
+      //   return '#' + ('00000' + (Math.random() * 0x1000000 << 0).toString(16)).substr(-6);
+      // },
 
       readyForUpdateNumValue() {
-        //alert("fasfa")
-        //this.chartDateTimeArr = this.chartDateTimeArr.slice(0, this.showAtTheSameTimeSpotNums);
-        //this.latestAllDataArr = this.latestAllDataArr.slice(0, this.showAtTheSameTimeSpotNums);
-
-        this.echoChangedForNum();
-
-        this.sendBackAfterSomeParasChanged(0);
+       this.echoChangedForNum();
+       this.updateUserSetupParas(0);
       },
 
-      sendBackAfterSomeParasChanged(chartIndex) {
-        //alert("this.user_all_usls[chartIndex]="+this.user_all_usls[chartIndex])
-        //if (this.simulateDemoFlag) return;
+      updateUserSetupParas(chartIndex){
         let newObj = {};
 
         newObj.initcfg = 0;
@@ -317,11 +360,66 @@
 
         newObj.idx = chartIndex;
 
-        newObj.user_usl = this.user_all_usls[chartIndex];
+        newObj.user_usl = this.user_all_usls[chartIndex].num;
 
-        newObj.user_lsl = this.user_all_lsls[chartIndex];
+        newObj.user_lsl = this.user_all_lsls[chartIndex].num;
 
         this.ws.send(JSON.stringify(newObj));
+      },
+
+      echoUSLAndSoOnParasChanged(chartIndex) {
+
+        if(this.usl_happen_changed_flag || this.lsl_happen_changed_flag){
+
+          this.usl_happen_changed_flag = false;
+          this.lsl_happen_changed_flag = false;
+
+          this.updateUserSetupParas(chartIndex);
+        }
+
+
+        if(Number(this.user_all_lcls[chartIndex].num)<Number(this.user_all_lsls[chartIndex].num))
+        {
+          alert('LCL的值的设定不能小于LSL的值');
+
+          this.user_all_lcls[chartIndex].num = this.old_user_all_lcls[chartIndex].num;
+          this.user_all_lsls[chartIndex].num = this.old_user_all_lsls[chartIndex].num;
+
+
+          return;
+        }
+
+        if(Number(this.user_all_lcls[chartIndex].num)>Number(this.user_all_means[chartIndex].num))
+        {
+          alert('LCL的值的设定不能大于MEAN的值');
+
+          this.user_all_lcls[chartIndex].num = this.old_user_all_lcls[chartIndex].num;
+
+          return;
+        }
+
+        if(Number(this.user_all_ucls[chartIndex].num)>Number(this.user_all_usls[chartIndex].num))
+        {
+          alert('UCL的值的设定不能大于USL的值');
+          this.user_all_ucls[chartIndex].num = this.old_user_all_ucls[chartIndex].num;
+          this.user_all_usls[chartIndex].num = this.old_user_all_usls[chartIndex].num;
+          return;
+        }
+
+        if(Number(this.user_all_ucls[chartIndex].num)<Number(this.user_all_means[chartIndex].num))
+        {
+          alert('UCL的值的设定不能小于MEAN的值');
+          this.user_all_ucls[chartIndex].num = this.old_user_all_ucls[chartIndex].num;
+          return;
+        }
+
+        this.old_user_all_ucls[chartIndex].num = this.user_all_ucls[chartIndex].num;
+        this.old_user_all_lcls[chartIndex].num = this.user_all_lcls[chartIndex].num;
+        this.old_user_all_usls[chartIndex].num = this.user_all_usls[chartIndex].num;
+        this.old_user_all_lsls[chartIndex].num = this.user_all_lsls[chartIndex].num;
+
+        this.readyForDrawSPCCharts();
+
       },
 
       execInitSendAction() {
@@ -329,12 +427,10 @@
         let initSender = '{"initcfg":1}';
         this.ws.send(initSender);
       },
+
       updateReceivedData(recvData) {
         console.log('recvdata:', recvData);
-
         //return;
-
-
         if (recvData.indexOf("datetime") > -1) {
 
           let realData = JSON.parse(recvData);
@@ -403,7 +499,7 @@
 
           this.spcFeaturesArr = featureArr;
 
-          this.bak_spcFeaturesArr = featureArr;
+          this.bak_spcFeaturesArr = JSON.parse(JSON.stringify(featureArr));
 
           this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
           for(var i=0;i<this.spcFeaturesArr.length;i++)
@@ -412,19 +508,47 @@
           }
           this.currentViewFeaturesList = [this.defaultLabel];
 
-          this.user_all_usls = basicSetupData.USL.slice(1,-1).split(",");
-          this.user_all_lsls = basicSetupData.LSL.slice(1,-1).split(",");
-          this.user_all_means = basicSetupData.mean.slice(1,-1).split(",");
-          this.user_all_sigmas = basicSetupData.sigma.slice(1,-1).split(",");
+          let a_user_all_usls = basicSetupData.USL.slice(1,-1).split(",");
+          let a_user_all_lsls = basicSetupData.LSL.slice(1,-1).split(",");
+          let a_user_all_means = basicSetupData.mean.slice(1,-1).split(",");
+          let a_user_all_sigmas = basicSetupData.sigma.slice(1,-1).split(",");
 
-          for(var i=0;i<this.user_all_usls.length;i++)
+          this.user_all_usls = [];
+          this.user_all_lsls = [];
+          this.user_all_means = [];
+          this.user_all_sigmas = [];
+          this.old_user_all_usls = [];
+          this.old_user_all_lsls = [];
+
+          for(var i=0;i<a_user_all_usls.length;i++)
           {
-            this.user_all_usls[i] = Number(this.user_all_usls[i]).toFixed(2);
-            this.user_all_lsls[i] = Number(this.user_all_lsls[i]).toFixed(2);
-            this.user_all_means[i] = Number(this.user_all_means[i]).toFixed(2);
-            this.user_all_sigmas[i] = Number(this.user_all_sigmas[i]).toFixed(2);
+            this.user_all_usls.push({num:Number(a_user_all_usls[i]).toFixed(2)});
+            this.user_all_lsls.push({num:Number(a_user_all_lsls[i]).toFixed(2)});
+            this.user_all_means.push({num:Number(a_user_all_means[i]).toFixed(2)});
+            this.user_all_sigmas.push({num:Number(a_user_all_sigmas[i]).toFixed(2)});
+            this.old_user_all_usls.push({num:Number(a_user_all_usls[i]).toFixed(2)});
+            this.old_user_all_lsls.push({num:Number(a_user_all_lsls[i]).toFixed(2)});
           }
 
+          //console.log(JSON.stringify(this.user_all_usls));
+
+          this.user_all_lcls = [];
+          this.user_all_ucls = [];
+          this.old_user_all_lcls = [];
+          this.old_user_all_ucls = [];
+
+          for(var j=0;j<this.user_all_means.length;j++)
+          {
+
+            let obj_1 = {num:(Number(this.user_all_means[j].num) - 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            let obj_1_old = {num:(Number(this.user_all_means[j].num) - 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            let obj_2 = {num:(Number(this.user_all_means[j].num) + 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            let obj_2_old = {num:(Number(this.user_all_means[j].num) + 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            this.user_all_lcls.push(obj_1);
+            this.user_all_ucls.push(obj_2);
+            this.old_user_all_lcls.push(obj_1_old);
+            this.old_user_all_ucls.push(obj_2_old);
+          }
           // console.log("this.spcFeaturesArr="+this.spcFeaturesArr+"~~~~~"+this.spcFeaturesArr.length);
           // console.log("this.user_all_usls="+this.user_all_usls+"~~~~~"+this.user_all_usls.length);
           // console.log("this.user_all_lsls="+this.user_all_lsls+"~~~~~"+this.user_all_lsls.length);
@@ -463,23 +587,22 @@
           }
 
           let usl_markline_value =
-            new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.user_all_usls[targetIndex]);
+            new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.old_user_all_usls[targetIndex].num);
 
-          let lsl_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.user_all_lsls[targetIndex]);
+          let lsl_markline_value =
+            new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.old_user_all_lsls[targetIndex].num);
 
-          let mean_middle_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.user_all_means[targetIndex]);
+          let mean_middle_markline_value =
+            new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(Number(this.user_all_means[targetIndex].num).toFixed(2));
 
-          let xx = (Number(this.user_all_means[targetIndex]) +Number(2*this.user_all_sigmas[targetIndex])).toFixed(2);
+          let mean_high_markline_value =
+            new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.old_user_all_ucls[targetIndex].num);
 
-          let mean_high_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(xx);
-
-          let yy = (Number(this.user_all_means[targetIndex]) - Number(2*this.user_all_sigmas[targetIndex])).toFixed(2);
-
-          let mean_low_markline_value = new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(yy);
+          let mean_low_markline_value =
+            new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.old_user_all_lcls[targetIndex].num);
 
           let time_data_arr = this.chartDateTimeArr;
 
-          // let real_data_arr = this.recombineMapArr(k);
           let real_data_arr;
 
           if (this.simulateDemoFlag) {
@@ -488,14 +611,15 @@
             real_data_arr = this.recombineMapArr(targetIndex);
           }
 
-          let exceedLimitDataArr =
-            this.highlightBeyondUSLOrLSLData(real_data_arr,usl_markline_value[0],lsl_markline_value[0])
+          //let exceedLimitUSLOrLSLDataDataArr = this.highlightBeyondUSLOrLSLData(real_data_arr,usl_markline_value[0],lsl_markline_value[0])
+          //let exceedLimitUCLOrLCLDataDataArr = this.highlightBeyondUCLOrLCLData(real_data_arr,mean_high_markline_value[0],mean_low_markline_value[0])
 
+          let focusHighlightsArr = this.highlightBeyondLimitData(real_data_arr,usl_markline_value[0],lsl_markline_value[0],mean_high_markline_value[0],mean_low_markline_value[0]);
           let pointedColor = this.preDefineColorArr[targetIndex];
 
           currentChart.resize();
 
-          currentChart.setOption(this.getAimOptionForECharts(exceedLimitDataArr,pointedColor, currentChart.getWidth()
+          currentChart.setOption(this.getAimOptionForECharts(focusHighlightsArr,pointedColor, currentChart.getWidth()
             - this.chartLeftMarginBlankWidth - this.chartRightMarginBlankWidth, featureName, time_data_arr,
             real_data_arr, usl_markline_value, lsl_markline_value, mean_middle_markline_value, mean_high_markline_value, mean_low_markline_value), true);
 
@@ -507,16 +631,28 @@
         this.initFirstFlag = false;
       },
 
-      highlightBeyondUSLOrLSLData(dataArr,usl,lsl){
+
+      highlightBeyondLimitData(dataArr,usl,lsl,ucl,lcl){
         let arr = [];
         for(var i=0;i<dataArr.length;i++)
         {
           if(dataArr[i]>usl || dataArr[i]<lsl) {
-            arr.push({'coord': [i, dataArr[i]]});
+            let a = new Object();
+            a.coord = [i, dataArr[i]];
+            a.symbol = 'circle';
+            a.symbolSize = '12';
+            arr.push(a);
+          } else if(dataArr[i]>ucl || dataArr[i]<lcl){
+            let b = new Object();
+            b.coord = [i, dataArr[i]];
+            b.symbol = 'emptycircle';
+            b.symbolSize = '9';
+            arr.push(b);
           }
         }
         return arr;
       },
+
 
       recombineMapArr(index) {
         let arr = [];
@@ -530,7 +666,8 @@
         currentChart.setOption({animation:true})
       },
 
-      getAimOptionForECharts(exceedLimitDataArr,pointedColor, chartRealWidth, featureName, time_data_arr,
+      getAimOptionForECharts(focusHighlightsArr,pointedColor,
+                             chartRealWidth, featureName, time_data_arr,
                              real_data_arr, usl, lsl, mean_middle, mean_high, mean_low) {
         //color: ['#FFA500','#FF0000','#FF00FF','#FFFF00','#000000','#0000ff'],
         // pointedColor = '#FFA500'
@@ -617,12 +754,8 @@
               },
               data: real_data_arr,
               markPoint:{
-                symbol: 'circle',
-                symbolSize: 6,
-                data:exceedLimitDataArr,
-                animation:true,
-                animationDuration:500
-              },
+                data:focusHighlightsArr
+              }
             },
             {
               name: 'USL',
@@ -802,7 +935,6 @@
     font-size: 16px;
   }
 
-
   .ivu-input {
     font-size: 14px !important;
     text-align: center !important;
@@ -810,14 +942,14 @@
 
   .m-ca-cp-cpk-label {
     float: left;
-    margin-left: 70px;
+    margin-left: 30px;
     margin-top:6px;
     font-weight:700;
   }
 
   .m-usl-lsl-label{
     float: right;
-    margin-right: 150px;
+    margin-right: 60px;
   }
 
   .u-onec-label {
