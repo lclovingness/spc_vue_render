@@ -135,7 +135,7 @@
 
       let wsServer = 'ws://' + host + '/';
 
-      console.log("Socket Server URL: " + wsServer);
+      console.log("WebSocket Server URL: " + wsServer);
 
       let Socket = 'MozWebSocket' in window ? MozWebSocket : WebSocket;
 
@@ -151,22 +151,16 @@
       }
 
       this.ws.onerror = function (evt) {
-        console.log(evt);
+        console.log("Error: "+evt);
       }
 
       this.ws.onmessage = function (evt) {
         ownerparent.updateReceivedData(evt.data);
       };
 
-      this.ws.onprob = function () {
-
-        console.log('Socket connection probd');
-
-      };
-
       this.ws.onopen = function () {
 
-        console.log('Socked Connected OK');
+        console.log('WebSocket Connected OK');
 
         ownerparent.execInitSendAction();
 
