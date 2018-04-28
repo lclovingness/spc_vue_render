@@ -194,6 +194,7 @@
 
       echoChangedForNum()
       {
+        if(this.initFirstFlag) return;
         let oldLength = this.latestAllDataArr.length;
         if (oldLength > this.showAtTheSameTimeSpotNums) {
           this.chartDateTimeArr = this.chartDateTimeArr.slice(oldLength - this.showAtTheSameTimeSpotNums);
@@ -271,6 +272,7 @@
       },
 
       rearrangeShowElementsByWindowResize() {
+        if(this.initFirstFlag) return;
         this.readyForDrawSPCCharts();
       },
 
@@ -362,6 +364,8 @@
       },
 
       echoUSLAndSoOnParasChanged(chartIndex) {
+
+        if(this.initFirstFlag) return;
 
         if(this.usl_happen_changed_flag || this.lsl_happen_changed_flag){
 
