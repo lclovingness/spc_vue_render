@@ -115,6 +115,7 @@
         lsl_happen_changed_flag:false,
         old_user_all_lsls:[],
         old_user_all_usls:[],
+        cycle_send_action_id:null
       }
     },
     watch: {
@@ -163,6 +164,8 @@
         console.log('WebSocket Connected OK');
 
         ownerparent.execInitSendAction();
+
+        ownerparent.cycle_send_action_id = setInterval(ownerparent.execInitSendAction,1000);
 
       };
 
@@ -428,6 +431,9 @@
 
       updateReceivedData(recvData) {
         console.log('recvdata:', recvData);
+
+        //recvdata: {"Ca": "[0.08686290758797023, 0.05061059978569413, 0.006417753707144008]", "Cp": "[7.221860887479555, 247.23022842860482, 14.583968242954178]", "data": "[3.2614205, 2.5157897, -0.038963854]", "Cpk": "[2.2033662084210492, 147.13046726119796, 13.835197712905462]", "datetime": "2018-05-16 14:40:02"}
+
         //return;
         if (recvData.indexOf("datetime") > -1) {
 
@@ -475,6 +481,9 @@
 
 
         if (recvData.indexOf("FeatureList") > -1) {
+
+          clearInterval(this.cycle_send_action_id);
+          this.cycle_send_action_id = null;
 
           let basicSetupData = JSON.parse(recvData);
 
