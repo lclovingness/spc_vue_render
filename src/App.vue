@@ -16,7 +16,8 @@
       <div id="sonTitle" v-show="!initFirstFlag">
         <span class="m-selectBoxes">当前图表显示：
 
-        <Select v-model="currentViewFeaturesList" multiple style="width:180px;text-align:left" @on-change="echoSelectChangedHandler"
+        <Select v-model="currentViewFeaturesList" multiple style="width:auto;text-align:left"
+                @on-change="echoSelectChangedHandler"
                 ref ="mySelectEntity">
           <Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{ item }}</Option>
         </Select>
@@ -115,7 +116,8 @@
         lsl_happen_changed_flag:false,
         old_user_all_lsls:[],
         old_user_all_usls:[],
-        cycle_send_action_id:null
+        cycle_send_action_id:null,
+        allDeviceNames:[]
       }
     },
     watch: {
@@ -146,7 +148,8 @@
         this.ws = new Object();
         this.ws.send = function () {
         }
-        //this.ws = new Socket('ws://spc0427.neuseer.cn/');
+        //this.simulateDemoFlag = true;
+        this.ws = new Socket('ws://spcs002.neuseer.cn/');
       } else {
         this.ws = new Socket(wsServer);
       }
@@ -190,7 +193,21 @@
 
       this.houxuanColors = this.houxuanColors.concat(arr);
 
-      //this.simulateInitData();
+      if(this.simulateDemoFlag)
+      {
+        this.simulateInitData();
+      }
+
+      this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
+
+      this.currentViewFeaturesList = [this.defaultLabel];
+
+      this.spcFeaturesArr = [];
+
+      this.allDeviceNames = [];
+
+      this.chartDateTimeArr = [];
+
     },
 
     methods: {
@@ -336,7 +353,7 @@
           this.preDefineColorArr.push(this.houxuanColors[i]);
         }
 
-        this.simulateDemoFlag = true;
+
 
         setTimeout(this.readyForDrawSPCCharts, 1000);
       },
@@ -430,18 +447,59 @@
       },
 
       updateReceivedData(recvData) {
-        console.log('recvdata:', recvData);
+
+        // console.log('recvdata:', recvData);
 
         //recvdata: {"Ca": "[0.08686290758797023, 0.05061059978569413, 0.006417753707144008]", "Cp": "[7.221860887479555, 247.23022842860482, 14.583968242954178]", "data": "[3.2614205, 2.5157897, -0.038963854]", "Cpk": "[2.2033662084210492, 147.13046726119796, 13.835197712905462]", "datetime": "2018-05-16 14:40:02"}
 
+        // recvdata: {"sigma": "[0.4635069240680802, 0.49475505369566564]", "USL": "[2.3626229725862364, 2.574345555144813]", "NUM": "50", "mean": "[-0.41841857182224484, -0.39418476702918076]", "LSL": "[-3.1994601162307257, -3.3627150892031743]"}
+
+        // recvdata: {"data": "[3.0069509, 2.535826]", "Cpk": "[-161210834100279.78, inf]", "devname": "GW0001", "Cp": "[695816536838883.6, inf]", "datetime": "2018-09-06 15:06:53", "featurelist": "['power', 'wind_speed']", "Ca": "[0.15396072915151343, 0.12337800397148196]", "devid": "38"}
+
         //return;
+
         if (recvData.indexOf("datetime") > -1) {
 
-          let realData = JSON.parse(recvData);
+          let realtimeData = JSON.parse(recvData);
 
-          this.chartDateTimeArr.push(realData.datetime);
+          if(!this.allDeviceNames.in_array(realtimeData.devname))
+          {
+            this.allDeviceNames.push(realtimeData.devname);
 
-          let darr = realData.data.slice(1,-1).split(",");
+            let featureArr = realtimeData.featurelist.slice(1,-1).split(",");
+
+            for(var k=0;k<featureArr.length;k++)
+            {
+              if(k==0)
+              {
+                featureArr[k] = realtimeData.devname+"~"+featureArr[k].slice(1,-1);
+              } else {
+                featureArr[k] = realtimeData.devname+"~"+featureArr[k].slice(2,-1);
+              }
+
+            }
+
+            this.spcFeaturesArr = this.spcFeaturesArr.concat(featureArr);
+
+            this.bak_spcFeaturesArr = JSON.parse(JSON.stringify(this.spcFeaturesArr));
+
+            this.preDefineColorArr = [];
+
+            for (var i = 0; i < this.spcFeaturesArr.length; i++)
+            {
+              this.preDefineColorArr.push(this.houxuanColors[i]);
+            }
+
+            for(var i=0;i<this.spcFeaturesArr.length;i++)
+            {
+              this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
+            }
+
+          }
+
+          this.chartDateTimeArr.push(realtimeData.datetime);
+
+          let darr = realtimeData.data.slice(1,-1).split(",");
 
           for(var j=0;j<darr.length;j++)
           {
@@ -450,9 +508,11 @@
 
           this.latestAllDataArr.push(darr);
 
-          let ca = realData.Ca.slice(1,-1).split(",");
-          let cp = realData.Cp.slice(1,-1).split(",");
-          let cpk = realData.Cpk.slice(1,-1).split(",");
+          //console.log("this.latestAllDataArr=="+this.latestAllDataArr);
+
+          let ca = realtimeData.Ca.slice(1,-1).split(",");
+          let cp = realtimeData.Cp.slice(1,-1).split(",");
+          let cpk = realtimeData.Cpk.slice(1,-1).split(",");
 
           for(var i=0;i<ca.length;i++)
           {
@@ -479,8 +539,7 @@
 
         }
 
-
-        if (recvData.indexOf("FeatureList") > -1) {
+        if (recvData.indexOf("sigma") > -1) {
 
           clearInterval(this.cycle_send_action_id);
           this.cycle_send_action_id = null;
@@ -490,30 +549,6 @@
           this.showAtTheSameTimeSpotNums = Number(basicSetupData.NUM);
 
           this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
-
-          let featureArr = basicSetupData.FeatureList.slice(1,-1).split(",");
-
-          for(var k=0;k<featureArr.length;k++)
-          {
-            if(k==0)
-            {
-              featureArr[k] = featureArr[k].slice(1,-1);
-            } else {
-              featureArr[k] = featureArr[k].slice(2,-1);
-            }
-
-          }
-
-          this.spcFeaturesArr = featureArr;
-
-          this.bak_spcFeaturesArr = JSON.parse(JSON.stringify(featureArr));
-
-          this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
-          for(var i=0;i<this.spcFeaturesArr.length;i++)
-          {
-            this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
-          }
-          this.currentViewFeaturesList = [this.defaultLabel];
 
           let a_user_all_usls = basicSetupData.USL.slice(1,-1).split(",");
           let a_user_all_lsls = basicSetupData.LSL.slice(1,-1).split(",");
@@ -556,18 +591,7 @@
             this.old_user_all_lcls.push(obj_1_old);
             this.old_user_all_ucls.push(obj_2_old);
           }
-          // console.log("this.spcFeaturesArr="+this.spcFeaturesArr+"~~~~~"+this.spcFeaturesArr.length);
-          // console.log("this.user_all_usls="+this.user_all_usls+"~~~~~"+this.user_all_usls.length);
-          // console.log("this.user_all_lsls="+this.user_all_lsls+"~~~~~"+this.user_all_lsls.length);
-          // console.log("this.user_all_means="+this.user_all_means+"~~~~~"+this.user_all_means.length);
-          // console.log("this.user_all_sigmas="+this.user_all_sigmas+"~~~~~"+this.user_all_sigmas.length);
 
-          this.preDefineColorArr = [];
-
-          for (var i = 0; i < this.spcFeaturesArr.length; i++) {
-            //this.preDefineColorArr.push(this.randomHexColor());
-            this.preDefineColorArr.push(this.houxuanColors[i]);
-          }
         }
 
 
@@ -577,6 +601,9 @@
 
         for (var k = 0; k < this.spcFeaturesArr.length; k++) {
 
+          if(this.d('chart_' + k) == null){
+            break;
+          }
           let currentChart = echarts.init(this.d('chart_' + k));
 
           this.d('chart_' + k).width = document.body.offsetWidth - 320 + "px";
@@ -612,16 +639,18 @@
 
           let real_data_arr;
 
-          if (this.simulateDemoFlag) {
+          if (this.simulateDemoFlag)
+          {
             real_data_arr = this.latestAllDataArr[targetIndex];
+
           } else {
+
             real_data_arr = this.recombineMapArr(targetIndex);
+
           }
 
-          //let exceedLimitUSLOrLSLDataDataArr = this.highlightBeyondUSLOrLSLData(real_data_arr,usl_markline_value[0],lsl_markline_value[0])
-          //let exceedLimitUCLOrLCLDataDataArr = this.highlightBeyondUCLOrLCLData(real_data_arr,mean_high_markline_value[0],mean_low_markline_value[0])
-
           let focusHighlightsArr = this.highlightBeyondLimitData(real_data_arr,usl_markline_value[0],lsl_markline_value[0],mean_high_markline_value[0],mean_low_markline_value[0]);
+
           let pointedColor = this.preDefineColorArr[targetIndex];
 
           currentChart.resize();
