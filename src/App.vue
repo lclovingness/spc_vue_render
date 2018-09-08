@@ -149,7 +149,7 @@
         this.ws.send = function () {
         }
         //this.simulateDemoFlag = true;
-        this.ws = new Socket('ws://spcs002.neuseer.cn/');
+        this.ws = new Socket('ws://lcspc001.neuseer.cn/');
       } else {
         this.ws = new Socket(wsServer);
       }
@@ -448,7 +448,7 @@
 
       updateReceivedData(recvData) {
 
-        // console.log('recvdata:', recvData);
+        console.log('recvdata:', recvData);
 
         //recvdata: {"Ca": "[0.08686290758797023, 0.05061059978569413, 0.006417753707144008]", "Cp": "[7.221860887479555, 247.23022842860482, 14.583968242954178]", "data": "[3.2614205, 2.5157897, -0.038963854]", "Cpk": "[2.2033662084210492, 147.13046726119796, 13.835197712905462]", "datetime": "2018-05-16 14:40:02"}
 
