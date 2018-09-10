@@ -14,9 +14,10 @@
 
     <div id="container" class="m-huabu">
       <div id="sonTitle" v-show="!initFirstFlag">
+        <span style="margin-right:15px;display: inline-block"><Button type="success" @click="pauseReceiveWebSocketDataHandler">{{ifAcceptRealtimeDataStr}}</Button></span>
         <span class="m-selectBoxes">当前图表显示：
 
-        <Select v-model="currentViewFeaturesList" multiple style="width:auto;text-align:left"
+        <Select v-model="currentViewFeaturesList" multiple disabled style="width:auto;text-align:left"
                 @on-change="echoSelectChangedHandler"
                 ref ="mySelectEntity">
           <Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{ item }}</Option>
@@ -29,6 +30,7 @@
                @on-focus="selectHighlightInputContent"></Input> 个
         <Button size="default" type="primary" class="m-updateNumBtn" @click="readyForUpdateNumValue">点击更新</Button>
         </span>
+        <span class="m-outputPrint" id="outputE" @mouseenter="xddddd" @mouseleave="yddddd"><Button size="small" type="primary" @click="decideIFPrintInControllPanel()" >{{ifPrintRealTimeDataToControllPanel}}</Button></span>
       </div>
       <div v-for="(item,index) in spcFeaturesArr">
         <hr style="margin-top:20px;margin-bottom:20px;height:1px;border:none;border-top:1px ridge gray;" v-show="!initFirstFlag"/>
@@ -82,6 +84,10 @@
           {fn:22}
 
         ],
+        ifAcceptRealtimeDataStr:'暂停接收',
+        acceptRealtimeDataFlag:true,
+        ifPrintRealTimeDataToControllPanel:'不输出到控制台',
+        printRealTimeToControllPanelFlag:true,
         w2:'123',
         spcFeaturesAddAllOptionArr:[],
         currentViewFeaturesList:['—— All Features ——'],
@@ -91,7 +97,7 @@
         showAtTheSameTimeSpotNums: 0,
         current_showAtTheSameTimeSpotNums:0,
         chartIndex: 0,
-        chartDateTimeArr: [],
+        latestAllDateTimeArr: [],
         latestAllDataArr: [],
         latestAllCa: [],
         latestAllCp: [],
@@ -149,7 +155,7 @@
         this.ws.send = function () {
         }
         //this.simulateDemoFlag = true;
-        this.ws = new Socket('ws://lcspc001.neuseer.cn/');
+        this.ws = new Socket('ws://spc43532.neuseer.cn');
       } else {
         this.ws = new Socket(wsServer);
       }
@@ -206,19 +212,57 @@
 
       this.allDeviceNames = [];
 
-      this.chartDateTimeArr = [];
-
     },
 
     methods: {
+
+      xddddd(){
+        document.getElementById("outputE").style.opacity = 1;
+      },
+
+      yddddd(){
+        document.getElementById("outputE").style.opacity = 0;
+      },
+
+      decideIFPrintInControllPanel(){
+        if(this.ifPrintRealTimeDataToControllPanel == '输出到控制台')
+        {
+
+          this.ifPrintRealTimeDataToControllPanel = '不输出到控制台';
+          this.printRealTimeToControllPanelFlag = true;
+
+        } else {
+
+          this.ifPrintRealTimeDataToControllPanel = '输出到控制台';
+          this.printRealTimeToControllPanelFlag = false;
+        }
+      },
+
+      pauseReceiveWebSocketDataHandler()
+      {
+        if(this.ifAcceptRealtimeDataStr == '暂停接收')
+        {
+
+          this.ifAcceptRealtimeDataStr = '恢复接收';
+          this.acceptRealtimeDataFlag = false;
+
+        } else {
+
+          this.ifAcceptRealtimeDataStr = '暂停接收';
+          this.acceptRealtimeDataFlag = true;
+        }
+      },
 
       echoChangedForNum()
       {
         if(this.initFirstFlag) return;
         let oldLength = this.latestAllDataArr.length;
         if (oldLength > this.showAtTheSameTimeSpotNums) {
-          this.chartDateTimeArr = this.chartDateTimeArr.slice(oldLength - this.showAtTheSameTimeSpotNums);
-          this.latestAllDataArr = this.latestAllDataArr.slice(oldLength - this.showAtTheSameTimeSpotNums);
+          for(var i=0;i<this.latestAllDataArr.length;i++)
+          {
+            this.latestAllDateTimeArr[i] = this.latestAllDateTimeArr[i].slice(oldLength - this.showAtTheSameTimeSpotNums);
+            this.latestAllDataArr[i] = this.latestAllDataArr[i].slice(oldLength - this.showAtTheSameTimeSpotNums);
+          }
         }
         //console.log(oldLength + "旧的和新的" + this.chartDateTimeArr.length);
         this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
@@ -281,7 +325,7 @@
 
         }
 
-        //console.log("-----"+this.spcFeaturesArr.toString());
+        //console.log("-----33333"+this.spcFeaturesArr.toString());
         setTimeout(this.readyForDrawSPCCharts, 500);
 
       },
@@ -448,7 +492,20 @@
 
       updateReceivedData(recvData) {
 
-        console.log('recvdata:', recvData);
+        if(this.acceptRealtimeDataFlag == false) return;
+
+        // console.log('recvdata:', recvData);
+
+        if(recvData.indexOf('{"datetime":')>-1)
+        {
+          if(this.printRealTimeToControllPanelFlag)
+          {
+            console.log('recvdata:', recvData);
+          }
+
+        } else {
+          console.log('recvdata:', recvData);
+        }
 
         //recvdata: {"Ca": "[0.08686290758797023, 0.05061059978569413, 0.006417753707144008]", "Cp": "[7.221860887479555, 247.23022842860482, 14.583968242954178]", "data": "[3.2614205, 2.5157897, -0.038963854]", "Cpk": "[2.2033662084210492, 147.13046726119796, 13.835197712905462]", "datetime": "2018-05-16 14:40:02"}
 
@@ -458,32 +515,23 @@
 
         //return;
 
+        //recvdata: {"datetime": "2018-09-10 11:35:01", "devname": "GW0001", "Ca": 0.06690521079932438, "feature": "power", "Cpk": 8.882326984309676, "featurelist": "['power', 'wind_speed']", "data": 2.5438406, "Cp": 19.111711881825663, "devid": "38"}
+
         if (recvData.indexOf("datetime") > -1) {
 
           let realtimeData = JSON.parse(recvData);
 
-          if(!this.allDeviceNames.in_array(realtimeData.devname))
-          {
+          if(!this.allDeviceNames.in_array(realtimeData.devname)) {
             this.allDeviceNames.push(realtimeData.devname);
+          }
 
-            let featureArr = realtimeData.featurelist.slice(1,-1).split(",");
-
-            for(var k=0;k<featureArr.length;k++)
-            {
-              if(k==0)
-              {
-                featureArr[k] = realtimeData.devname+"~"+featureArr[k].slice(1,-1);
-              } else {
-                featureArr[k] = realtimeData.devname+"~"+featureArr[k].slice(2,-1);
-              }
-
-            }
-
-            this.spcFeaturesArr = this.spcFeaturesArr.concat(featureArr);
-
-            this.bak_spcFeaturesArr = JSON.parse(JSON.stringify(this.spcFeaturesArr));
+          if(!this.spcFeaturesArr.in_array(realtimeData.devname + "~" + realtimeData.feature) && this.currentViewFeaturesList[0] == this.defaultLabel)
+          {
+            this.spcFeaturesArr.push(realtimeData.devname + "~" + realtimeData.feature);
 
             this.preDefineColorArr = [];
+
+            this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
 
             for (var i = 0; i < this.spcFeaturesArr.length; i++)
             {
@@ -495,40 +543,61 @@
               this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
             }
 
+            this.bak_spcFeaturesArr = JSON.parse(JSON.stringify(this.spcFeaturesArr));
+
+            this.latestAllDateTimeArr.push([]);
+
+            this.latestAllDataArr.push([]);
+
+            this.latestAllCa.push("");
+
+            this.latestAllCp.push("");
+
+            this.latestAllCpk.push("");
+
           }
 
-          this.chartDateTimeArr.push(realtimeData.datetime);
+          let xxx = this.spcFeaturesArr.length-1;
 
-          let darr = realtimeData.data.slice(1,-1).split(",");
+          this.spcFeaturesArr.splice(xxx,1,this.spcFeaturesArr[xxx]);
 
-          for(var j=0;j<darr.length;j++)
-          {
-            darr[j] = Number(darr[j]);
+          //console.log("this.spcFeaturesArr==="+this.spcFeaturesArr);
+
+          let currentFeatureX = this.spcFeaturesArr.indexOf(realtimeData.devname + "~" + realtimeData.feature);
+
+          //console.log("currentFeatureX==="+currentFeatureX);
+
+          if(currentFeatureX == -1) return;
+
+          if(!this.latestAllDateTimeArr[currentFeatureX].in_array(realtimeData.datetime)){
+
+            //console.log("currentFeatureX===="+currentFeatureX)
+
+            this.latestAllDateTimeArr[currentFeatureX].push(realtimeData.datetime);
+
+            this.latestAllDataArr[currentFeatureX].push(Number(realtimeData.data));
+
+            this.latestAllCa[currentFeatureX] = Number(realtimeData.Ca).toFixed(2);
+
+            this.latestAllCp[currentFeatureX] = Number(realtimeData.Cp).toFixed(2);
+
+            this.latestAllCpk[currentFeatureX] = Number(realtimeData.Cpk).toFixed(2);
           }
 
-          this.latestAllDataArr.push(darr);
+          // if(realtimeData.devname + "~" + realtimeData.feature == "GW0001~power"){
+          //   console.log("#############=="+(realtimeData.devname + "~" + realtimeData.feature));
+          //   console.log("ca="+this.latestAllCa[currentFeatureX]);
+          //   console.log("cp="+this.latestAllCp[currentFeatureX]);
+          //   console.log("cpk="+this.latestAllCpk[currentFeatureX]);
+          //   console.log(currentFeatureX);
+          //   console.log("#############")
+          // }
 
-          //console.log("this.latestAllDataArr=="+this.latestAllDataArr);
 
-          let ca = realtimeData.Ca.slice(1,-1).split(",");
-          let cp = realtimeData.Cp.slice(1,-1).split(",");
-          let cpk = realtimeData.Cpk.slice(1,-1).split(",");
+          if (this.latestAllDataArr[currentFeatureX].length > this.showAtTheSameTimeSpotNums) {
 
-          for(var i=0;i<ca.length;i++)
-          {
-            ca[i] = Number(ca[i]);
-            cp[i] = Number(cp[i]);
-            cpk[i] = Number(cpk[i]);
-          }
-
-          this.latestAllCa = ca.map((item) => {return item.toFixed(2)});
-          //
-          this.latestAllCp = cp.map((item) => {return item.toFixed(2)});
-          //
-          this.latestAllCpk = cpk.map((item) => {return item.toFixed(2)});
-          if (this.latestAllDataArr.length > this.showAtTheSameTimeSpotNums) {
-            this.chartDateTimeArr.shift();
-            this.latestAllDataArr.shift();
+            this.latestAllDateTimeArr[currentFeatureX].shift();
+            this.latestAllDataArr[currentFeatureX].shift();
           }
 
           this.readyForDrawSPCCharts();
@@ -606,6 +675,8 @@
           }
           let currentChart = echarts.init(this.d('chart_' + k));
 
+          currentChart.clear();
+
           this.d('chart_' + k).width = document.body.offsetWidth - 320 + "px";
 
           let featureName = this.spcFeaturesArr[k];
@@ -635,19 +706,13 @@
           let mean_low_markline_value =
             new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.old_user_all_lcls[targetIndex].num);
 
-          let time_data_arr = this.chartDateTimeArr;
+          let time_data_arr = this.latestAllDateTimeArr[targetIndex];
 
           let real_data_arr;
 
-          if (this.simulateDemoFlag)
-          {
-            real_data_arr = this.latestAllDataArr[targetIndex];
+          //console.log("targetIndex=="+targetIndex);
 
-          } else {
-
-            real_data_arr = this.recombineMapArr(targetIndex);
-
-          }
+          real_data_arr = this.latestAllDataArr[targetIndex];
 
           let focusHighlightsArr = this.highlightBeyondLimitData(real_data_arr,usl_markline_value[0],lsl_markline_value[0],mean_high_markline_value[0],mean_low_markline_value[0]);
 
@@ -955,6 +1020,13 @@
     text-align: center;
   }
 
+  .m-outputPrint{
+    opacity: 0;
+    margin-left:10px;
+    display:inline-block;
+  }
+
+
   .m-selectBoxes{
     margin-right:70px;
   }
@@ -1031,7 +1103,7 @@
     font-size: 14px;
     width: auto;
     height: auto;
-    margin-top: 20px;
+    margin-top: 30px;
     margin-left: 160px;
     margin-right: 160px;
   }
