@@ -17,7 +17,7 @@
         <span style="margin-right:15px;display: inline-block"><Button type="success" @click="pauseReceiveWebSocketDataHandler">{{ifAcceptRealtimeDataStr}}</Button></span>
         <span class="m-selectBoxes">当前图表显示：
 
-        <Select v-model="currentViewFeaturesList" multiple disabled style="width:auto;text-align:left"
+        <Select v-model="currentViewFeaturesList" multiple style="width:auto;text-align:left"
                 @on-change="echoSelectChangedHandler"
                 ref ="mySelectEntity">
           <Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{ item }}</Option>
@@ -38,21 +38,21 @@
         <div :id="'chart_'+index" class="m-spcChart"></div>
         <div v-show="chartWholeShowFlag">
           <span class="m-ca-cp-cpk-label">
-            <span class="u-onec-label">Ca: {{latestAllCa[index]}}</span>
-            <span class="u-onec-label">Cp: {{latestAllCp[index]}}</span>
-            <span class="u-onec-label">Cpk: {{latestAllCpk[index]}}</span>
+            <span class="u-onec-label">Ca: {{latestAllCa[transferRealIndex(item)]}}</span>
+            <span class="u-onec-label">Cp: {{latestAllCp[transferRealIndex(item)]}}</span>
+            <span class="u-onec-label">Cpk: {{latestAllCpk[transferRealIndex(item)]}}</span>
           </span>
           <span class="m-usl-lsl-label">
-                自定义 —— LSL: <Input v-model="user_all_lsls[index].num" style="width: 60px;margin-right:20px"
+                自定义 —— LSL: <Input v-model="user_all_lsls[transferRealIndex(item)].num" style="width: 60px;margin-right:20px"
                                    @on-focus="selectHighlightInputContent" number></Input>USL:
-            <Input v-model="user_all_usls[index].num" style="width: 60px;margin-right:20px" @on-focus="selectHighlightInputContent" number></Input>
+            <Input v-model="user_all_usls[transferRealIndex(item)].num" style="width: 60px;margin-right:20px" @on-focus="selectHighlightInputContent" number></Input>
             LCL:
-            <Input v-model="user_all_lcls[index].num" style="width: 60px;margin-right:20px"
+            <Input v-model="user_all_lcls[transferRealIndex(item)].num" style="width: 60px;margin-right:20px"
                    @on-focus="selectHighlightInputContent" number></Input>
             UCL:
-            <Input v-model="user_all_ucls[index].num" style="width: 60px" @on-focus="selectHighlightInputContent" number></Input>
+            <Input v-model="user_all_ucls[transferRealIndex(item)].num" style="width: 60px" @on-focus="selectHighlightInputContent" number></Input>
               <Button
-                size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="echoUSLAndSoOnParasChanged(index)">
+                size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="echoUSLAndSoOnParasChanged(transferRealIndex(item))">
                 点击更新
               </Button>
           </span>
@@ -427,6 +427,17 @@
         this.ws.send(JSON.stringify(newObj));
       },
 
+      transferRealIndex(deviceAndFeature)
+      {
+        for(var x=0;x<this.bak_spcFeaturesArr.length;x++)
+        {
+          if(deviceAndFeature == this.bak_spcFeaturesArr[x])
+          {
+            return x;
+          }
+        }
+      },
+
       echoUSLAndSoOnParasChanged(chartIndex) {
 
         if(this.initFirstFlag) return;
@@ -559,29 +570,33 @@
 
           let xxx = this.spcFeaturesArr.length-1;
 
-          this.spcFeaturesArr.splice(xxx,1,this.spcFeaturesArr[xxx]);
+          let xxxValue = this.spcFeaturesArr[xxx]
+
+          this.spcFeaturesArr.splice(xxx,1,xxxValue);
 
           //console.log("this.spcFeaturesArr==="+this.spcFeaturesArr);
 
           let currentFeatureX = this.spcFeaturesArr.indexOf(realtimeData.devname + "~" + realtimeData.feature);
 
+          let bak_currentFeatureX = this.bak_spcFeaturesArr.indexOf(realtimeData.devname + "~" + realtimeData.feature);
+
           //console.log("currentFeatureX==="+currentFeatureX);
 
           if(currentFeatureX == -1) return;
 
-          if(!this.latestAllDateTimeArr[currentFeatureX].in_array(realtimeData.datetime)){
+          if(!this.latestAllDateTimeArr[bak_currentFeatureX].in_array(realtimeData.datetime)){
 
             //console.log("currentFeatureX===="+currentFeatureX)
 
-            this.latestAllDateTimeArr[currentFeatureX].push(realtimeData.datetime);
+            this.latestAllDateTimeArr[bak_currentFeatureX].push(realtimeData.datetime);
 
-            this.latestAllDataArr[currentFeatureX].push(Number(realtimeData.data));
+            this.latestAllDataArr[bak_currentFeatureX].push(Number(realtimeData.data));
 
-            this.latestAllCa[currentFeatureX] = Number(realtimeData.Ca).toFixed(2);
+            this.latestAllCa[bak_currentFeatureX] = Number(realtimeData.Ca).toFixed(2);
 
-            this.latestAllCp[currentFeatureX] = Number(realtimeData.Cp).toFixed(2);
+            this.latestAllCp[bak_currentFeatureX] = Number(realtimeData.Cp).toFixed(2);
 
-            this.latestAllCpk[currentFeatureX] = Number(realtimeData.Cpk).toFixed(2);
+            this.latestAllCpk[bak_currentFeatureX] = Number(realtimeData.Cpk).toFixed(2);
           }
 
           // if(realtimeData.devname + "~" + realtimeData.feature == "GW0001~power"){
@@ -594,10 +609,10 @@
           // }
 
 
-          if (this.latestAllDataArr[currentFeatureX].length > this.showAtTheSameTimeSpotNums) {
+          if (this.latestAllDataArr[bak_currentFeatureX].length > this.showAtTheSameTimeSpotNums) {
 
-            this.latestAllDateTimeArr[currentFeatureX].shift();
-            this.latestAllDataArr[currentFeatureX].shift();
+            this.latestAllDateTimeArr[bak_currentFeatureX].shift();
+            this.latestAllDataArr[bak_currentFeatureX].shift();
           }
 
           this.readyForDrawSPCCharts();
@@ -691,6 +706,8 @@
             }
           }
 
+          //console.log("000000000==="+this.old_user_all_usls[targetIndex].num+"~~"+this.current_showAtTheSameTimeSpotNums);
+
           let usl_markline_value =
             new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.old_user_all_usls[targetIndex].num);
 
@@ -708,11 +725,15 @@
 
           let time_data_arr = this.latestAllDateTimeArr[targetIndex];
 
-          let real_data_arr;
 
-          //console.log("targetIndex=="+targetIndex);
 
-          real_data_arr = this.latestAllDataArr[targetIndex];
+          let real_data_arr = this.latestAllDataArr[targetIndex];
+
+          if(time_data_arr.length>this.current_showAtTheSameTimeSpotNums)
+          {
+            time_data_arr = time_data_arr.slice(0,this.current_showAtTheSameTimeSpotNums);
+            real_data_arr = real_data_arr.slice(0,this.current_showAtTheSameTimeSpotNums);
+          }
 
           let focusHighlightsArr = this.highlightBeyondLimitData(real_data_arr,usl_markline_value[0],lsl_markline_value[0],mean_high_markline_value[0],mean_low_markline_value[0]);
 
@@ -847,6 +868,7 @@
             {
               name: featureName,
               type: 'line',
+              smooth:true,
               symbol:'roundRect',
               symbolSize:8,
               showSymbol: false,
