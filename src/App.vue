@@ -381,8 +381,8 @@
 
         for(var j=0;j<this.user_all_means.length;j++)
         {
-          let obj_1 = {num:(this.user_all_means[j].num - 2*this.user_all_sigmas[j].num).toFixed(2)}
-          let obj_2 = {num:(this.user_all_means[j].num + 2*this.user_all_sigmas[j].num).toFixed(2)}
+          let obj_1 = {num:(this.user_all_means[j].num - 3*this.user_all_sigmas[j].num).toFixed(2)} // lcl 是 3倍的 sigma
+          let obj_2 = {num:(this.user_all_means[j].num + 3*this.user_all_sigmas[j].num).toFixed(2)} // ucl 是 3倍的 sigma
           this.user_all_lcls.push(obj_1);
           this.user_all_ucls.push(obj_2);
           this.old_user_all_lcls.push(JSON.parse(JSON.stringify(obj_1)));
@@ -665,11 +665,12 @@
 
           for(var j=0;j<this.user_all_means.length;j++)
           {
-
-            let obj_1 = {num:(Number(this.user_all_means[j].num) - 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
-            let obj_1_old = {num:(Number(this.user_all_means[j].num) - 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
-            let obj_2 = {num:(Number(this.user_all_means[j].num) + 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
-            let obj_2_old = {num:(Number(this.user_all_means[j].num) + 2*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            // lcl 是 -3倍的 sigma; ucl 是 +3倍的 sigma;
+            let obj_1 = {num:(Number(this.user_all_means[j].num) - 3*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            let obj_1_old =
+              {num:(Number(this.user_all_means[j].num) - 3*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            let obj_2 = {num:(Number(this.user_all_means[j].num) + 3*Number(this.user_all_sigmas[j].num)).toFixed(2)}
+            let obj_2_old = {num:(Number(this.user_all_means[j].num) + 3*Number(this.user_all_sigmas[j].num)).toFixed(2)}
             this.user_all_lcls.push(obj_1);
             this.user_all_ucls.push(obj_2);
             this.old_user_all_lcls.push(obj_1_old);
