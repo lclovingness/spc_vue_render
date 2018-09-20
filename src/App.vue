@@ -17,15 +17,16 @@
         <span style="margin-right:15px;display: inline-block"><Button type="success" @click="pauseReceiveWebSocketDataHandler">{{ifAcceptRealtimeDataStr}}</Button></span>
         <span class="m-selectBoxes">当前图表显示：
 
-        <Select v-model="currentViewFeaturesList" multiple style="width:auto;text-align:left"
+        <Select v-model="currentViewFeaturesList" multiple style="max-width:350px;width:auto;text-align:left"
                 @on-change="echoSelectChangedHandler"
                 ref ="mySelectEntity">
-          <Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{ item }}</Option>
+          <Option v-for="(item,index) in spcFeaturesAddAllOptionArr" :value="item" :key="item">{{
+            item }}</Option>
         </Select>
-
+（可多选）
         </span>
 
-        <span>自定义同时显示数据点的数量：
+        <span style="display: inline-block">同时显示数据点的数量：
         <Input v-model="showAtTheSameTimeSpotNums" style="width: 40px"
                @on-focus="selectHighlightInputContent"></Input> 个
         <Button size="default" type="primary" class="m-updateNumBtn" @click="readyForUpdateNumValue">点击更新</Button>
@@ -36,7 +37,7 @@
         <hr style="margin-top:20px;margin-bottom:20px;height:1px;border:none;border-top:1px ridge gray;" v-show="!initFirstFlag"/>
         <br>
         <div :id="'chart_'+index" class="m-spcChart"></div>
-        <div v-show="chartWholeShowFlag">
+        <div v-show="chartWholeShowFlag" class="m-addtionalControllBar">
           <span class="m-ca-cp-cpk-label">
             <span class="u-onec-label">Ca: {{latestAllCa[transferRealIndex(item)]}}</span>
             <span class="u-onec-label">Cp: {{latestAllCp[transferRealIndex(item)]}}</span>
@@ -62,6 +63,19 @@
       </div>
       <br>
       <br>
+      <Modal
+        v-model="ifNeedShowAllFeaturesFlag"
+        width="600"
+        title='温馨提示'
+        closable
+        class="vertical-center-modal"
+        @on-ok="ok_for_show_all_features"
+        @on-cancel="cancel_for_show_all_features"
+      >
+        <p class="u-besuredelsty">当前所有Feature加起来的数量是 {{bak_spcFeaturesArr.length}} 个，如果同时显示实时数据状态图，会严重消耗电脑的CPU资源，可能导致页面变卡变慢，请知悉。<br><br>
+        您果真确定要同时显示 {{bak_spcFeaturesArr.length}} 个Feature的SPC实时数据状态图吗？
+        </p>
+      </Modal>
     </div>
   </div>
 </template>
@@ -86,11 +100,11 @@
         ],
         ifAcceptRealtimeDataStr:'暂停接收',
         acceptRealtimeDataFlag:true,
-        ifPrintRealTimeDataToControllPanel:'不输出到控制台',
-        printRealTimeToControllPanelFlag:true,
+        ifPrintRealTimeDataToControllPanel:'输出到控制台',
+        printRealTimeToControllPanelFlag:false,
         w2:'123',
         spcFeaturesAddAllOptionArr:[],
-        currentViewFeaturesList:['—— All Features ——'],
+        currentViewFeaturesList:'',
         ws: null,
         myChart: null,
         spcFeaturesArr: [],
@@ -123,7 +137,11 @@
         old_user_all_lsls:[],
         old_user_all_usls:[],
         cycle_send_action_id:null,
-        allDeviceNames:[]
+        allDeviceNames:[],
+        availableArr:[],
+        recentRT:null,
+        ifNeedShowAllFeaturesFlag:false,
+        bak_currentViewFeaturesList:[]
       }
     },
     watch: {
@@ -155,7 +173,9 @@
         this.ws.send = function () {
         }
         //this.simulateDemoFlag = true;
-        this.ws = new Socket('ws://spc43532.neuseer.cn');
+
+        this.ws = new Socket('ws://lcspcgw001.neuseer.cn/');
+        //this.ws = new Socket('ws://lcspc01.neuseer.cn/');
       } else {
         this.ws = new Socket(wsServer);
       }
@@ -197,20 +217,22 @@
         return item;
       });
 
-      this.houxuanColors = this.houxuanColors.concat(arr);
+      //this.houxuanColors = this.houxuanColors.concat(arr);
 
-      if(this.simulateDemoFlag)
-      {
-        this.simulateInitData();
-      }
-
-      this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
-
-      this.currentViewFeaturesList = [this.defaultLabel];
+      // if(this.simulateDemoFlag)
+      // {
+      //   this.simulateInitData();
+      // }
+      //
+      // this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
+      //
+      // this.currentViewFeaturesList = [this.defaultLabel];
 
       this.spcFeaturesArr = [];
 
       this.allDeviceNames = [];
+
+      this.recentRT = null;
 
     },
 
@@ -264,43 +286,62 @@
             this.latestAllDataArr[i] = this.latestAllDataArr[i].slice(oldLength - this.showAtTheSameTimeSpotNums);
           }
         }
-        //console.log(oldLength + "旧的和新的" + this.chartDateTimeArr.length);
         this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
         this.readyForDrawSPCCharts();
       },
 
-      echoSelectChangedHandler(arr){
+      echoSelectChangedHandler()
+      {
 
-        if(arr.find((element) => (element == this.defaultLabel)))
+        if(this.currentViewFeaturesList[0] != this.defaultLabel && this.currentViewFeaturesList.indexOf(this.defaultLabel)>-1)
         {
-          if(arr[0] == this.defaultLabel && arr.length >1)
+          if(this.bak_spcFeaturesArr.length>8)
           {
-            arr.shift();
+            this.ifNeedShowAllFeaturesFlag = true;
+
+            this.bak_currentViewFeaturesList = this.currentViewFeaturesList.slice(0,-1);
+
+          } else {
+            setTimeout(()=>{
+              this.currentViewFeaturesList = [this.defaultLabel];
+            },200);
           }
 
-          if(arr[arr.length-1] == this.defaultLabel && arr.length >1){
-            while(arr.length>1)
-            {
-              arr.shift();
-            }
-          }
+        } else if(this.currentViewFeaturesList[0] == this.defaultLabel && this.currentViewFeaturesList.length>1){
 
-        }else if(arr.length == 0){
-
-          arr.push(this.defaultLabel);
+          setTimeout(()=>{
+              this.currentViewFeaturesList = [this.currentViewFeaturesList[1]];
+          },200);
 
         }
 
         this.$refs.mySelectEntity.hideMenu(); // 这里是直接调用 iView Select 组件里的方法
       },
 
+      ok_for_show_all_features(){
+        this.ifNeedShowAllFeaturesFlag = false;
+        setTimeout(()=>{
+          this.currentViewFeaturesList = [this.defaultLabel];
+        },200);
+      },
+
+      cancel_for_show_all_features()
+      {
+        setTimeout(()=>{
+          this.currentViewFeaturesList = JSON.parse(JSON.stringify(this.bak_currentViewFeaturesList));
+      },200);
+
+        this.ifNeedShowAllFeaturesFlag = false;
+      },
+
+      // 在选择了下拉复选框后，重新渲染图片
       renewDrawCharts(){
 
-        /*
-        recvdata: {"LSL": "[-1.2099789994074721, -1.0985858278838847]", "USL": "[-1.1189420812338151, -0.7057414610631854]", "NUM": "100", "FeatureList": "['generator_speed', 'power']", "sigma": "[0.015172819695609525, 0.06547406113678321]", "mean": "[-1.1644605403206436, -0.902163644473535]"}
-         */
+        if(this.initFirstFlag || this.ifNeedShowAllFeaturesFlag) return;
 
-        if(this.initFirstFlag) return;
+        // console.log("在选择了下拉复选框后，重新渲染图片")
+        // console.log("this.currentViewFeaturesList=="+this.currentViewFeaturesList);
+        // console.log("this.currentViewFeaturesList.length=="+this.currentViewFeaturesList.length);
 
         if (this.currentViewFeaturesList.length == 1 && this.currentViewFeaturesList[0] == this.defaultLabel) {
           this.spcFeaturesArr = this.bak_spcFeaturesArr.map((item) => {return item});
@@ -325,7 +366,6 @@
 
         }
 
-        //console.log("-----33333"+this.spcFeaturesArr.toString());
         setTimeout(this.readyForDrawSPCCharts, 500);
 
       },
@@ -340,71 +380,75 @@
         this.readyForDrawSPCCharts();
       },
 
-      simulateInitData() {
-
-        this.spcFeaturesArr = ['wind_direction','generator_speed'];
-
-        this.bak_spcFeaturesArr = ['wind_direction','generator_speed'];
-        //this.spcFeaturesAddAllOptionArr = ['创建应用时配置的所有特征参数'];
-        this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
-        for(var i=0;i<this.spcFeaturesArr.length;i++)
-        {
-          this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
-        }
-        //this.spcFeaturesAddAllOptionArr = this.spcFeaturesArr.concat(['创建应用时配置所有特征参数']);
-        this.currentViewFeaturesList = [this.defaultLabel];
-
-        this.showAtTheSameTimeSpotNums = 9;
-
-        this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
-
-
-        this.chartDateTimeArr = ["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
-        this.latestAllDataArr = [[-5.2424242, -30.4214124, -50.254235, 45.85687, 60.745657, 20.474747467, 55.74747476,
-          33.4745757, 105.74674747], [6.7476747, 32.74767475, 45.74764747, 51.74657475, -38.4775757, 99.747657757,
-          45.74757457, 59.7456757,
-          28.435323]];
-        this.latestAllCa = [11.3455666, 12.567890].map((item) => {return item.toFixed(2)});
-        this.latestAllCp = [13.45667, 20.76575].map((item) => {return item.toFixed(2)});
-        this.latestAllCpk = [15.41431, 18.523453253].map((item) => {return item.toFixed(2)});
-        this.user_all_usls = [{num:95}, {num:90}];
-        this.user_all_lsls = [{num:-40}, {num:-30}];
-        this.old_user_all_usls = [{num:95}, {num:90}];
-        this.old_user_all_lsls = [{num:-40}, {num:-30}];
-        this.user_all_means = [{num:35.63465464356}, {num:39.634564}]
-        this.user_all_sigmas = [{num:20.63645636}, {num:10.9999988888}]
-
-        this.user_all_lcls = [];
-        this.user_all_ucls = [];
-        this.old_user_all_lcls = [];
-        this.old_user_all_ucls = [];
-
-        for(var j=0;j<this.user_all_means.length;j++)
-        {
-          let obj_1 = {num:(this.user_all_means[j].num - 3*this.user_all_sigmas[j].num).toFixed(2)} // lcl 是 3倍的 sigma
-          let obj_2 = {num:(this.user_all_means[j].num + 3*this.user_all_sigmas[j].num).toFixed(2)} // ucl 是 3倍的 sigma
-          this.user_all_lcls.push(obj_1);
-          this.user_all_ucls.push(obj_2);
-          this.old_user_all_lcls.push(JSON.parse(JSON.stringify(obj_1)));
-          this.old_user_all_ucls.push(JSON.parse(JSON.stringify(obj_2)));
-        }
-
-        this.d('tempHinterLayer').style.display = "none";
-
-        this.preDefineColorArr = [];
-        for (var i = 0; i < this.spcFeaturesArr.length; i++) {
-          //this.preDefineColorArr.push(this.randomHexColor());
-          this.preDefineColorArr.push(this.houxuanColors[i]);
-        }
-
-
-
-        setTimeout(this.readyForDrawSPCCharts, 1000);
-      },
-
-      // randomHexColor() { //随机生成十六进制颜色
-      //   return '#' + ('00000' + (Math.random() * 0x1000000 << 0).toString(16)).substr(-6);
+      // simulateInitData() {
+      //
+      //   this.spcFeaturesArr = ["GW0001~power","GW0001~wind_speed","GW0002~power","GW0002~wind_speed"];
+      //
+      //   this.bak_spcFeaturesArr = ["GW0001~power","GW0001~wind_speed","GW0002~power","GW0002~wind_speed"];
+      //   //this.spcFeaturesAddAllOptionArr = ['创建应用时配置的所有特征参数'];
+      //   this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
+      //   for(var i=0;i<this.spcFeaturesArr.length;i++)
+      //   {
+      //     this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
+      //   }
+      //   //this.spcFeaturesAddAllOptionArr = this.spcFeaturesArr.concat(['创建应用时配置所有特征参数']);
+      //   this.currentViewFeaturesList = [this.defaultLabel];
+      //
+      //   this.showAtTheSameTimeSpotNums = 9;
+      //
+      //   this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
+      //
+      //
+      //   this.chartDateTimeArr = ["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
+      //   this.latestAllDataArr = [[-5.2424242, -30.4214124, -50.254235, 45.85687, 60.745657, 20.474747467, 55.74747476,
+      //     33.4745757, 105.74674747], [6.7476747, 32.74767475, 45.74764747, 51.74657475, -38.4775757, 99.747657757,
+      //     45.74757457, 59.7456757,
+      //     28.435323]];
+      //   this.latestAllCa = [11.3455666, 12.567890].map((item) => {return item.toFixed(2)});
+      //   this.latestAllCp = [13.45667, 20.76575].map((item) => {return item.toFixed(2)});
+      //   this.latestAllCpk = [15.41431, 18.523453253].map((item) => {return item.toFixed(2)});
+      //   this.user_all_usls = [{num:95}, {num:90}];
+      //   this.user_all_lsls = [{num:-40}, {num:-30}];
+      //   this.old_user_all_usls = [{num:95}, {num:90}];
+      //   this.old_user_all_lsls = [{num:-40}, {num:-30}];
+      //   this.user_all_means = [{num:35.63465464356}, {num:39.634564}]
+      //   this.user_all_sigmas = [{num:20.63645636}, {num:10.9999988888}]
+      //
+      //   this.user_all_lcls = [];
+      //   this.user_all_ucls = [];
+      //   this.old_user_all_lcls = [];
+      //   this.old_user_all_ucls = [];
+      //
+      //   for(var j=0;j<this.user_all_means.length;j++)
+      //   {
+      //     let obj_1 = {num:(this.user_all_means[j].num - 3*this.user_all_sigmas[j].num).toFixed(2)} // lcl 是 3倍的 sigma
+      //     let obj_2 = {num:(this.user_all_means[j].num + 3*this.user_all_sigmas[j].num).toFixed(2)} // ucl 是 3倍的 sigma
+      //     this.user_all_lcls.push(obj_1);
+      //     this.user_all_ucls.push(obj_2);
+      //     this.old_user_all_lcls.push(JSON.parse(JSON.stringify(obj_1)));
+      //     this.old_user_all_ucls.push(JSON.parse(JSON.stringify(obj_2)));
+      //   }
+      //
+      //   this.d('tempHinterLayer').style.display = "none";
+      //
+      //   this.preDefineColorArr = [];
+      //   for (var i = 0; i < this.spcFeaturesArr.length; i++) {
+      //     //this.preDefineColorArr.push(this.randomHexColor());
+      //     if(i>=this.houxuanColors.length)
+      //     {
+      //       this.preDefineColorArr.push(this.houxuanColors[i]);
+      //     } else {
+      //       this.preDefineColorArr.push(this.randomHexColor());
+      //     }
+      //
+      //   }
+      //
+      //   setTimeout(this.readyForDrawSPCCharts, 1000);
       // },
+
+       randomHexColor() { //随机生成十六进制颜色
+         return '#' + ('00000' + (Math.random() * 0x1000000 << 0).toString(16)).substr(-6);
+       },
 
       readyForUpdateNumValue() {
        this.echoChangedForNum();
@@ -496,7 +540,6 @@
       },
 
       execInitSendAction() {
-        //if (this.simulateDemoFlag) return;
         let initSender = '{"initcfg":1}';
         this.ws.send(initSender);
       },
@@ -505,9 +548,7 @@
 
         if(this.acceptRealtimeDataFlag == false) return;
 
-        // console.log('recvdata:', recvData);
-
-        if(recvData.indexOf('{"datetime":')>-1)
+        if(recvData.indexOf("datetime") > -1)
         {
           if(this.printRealTimeToControllPanelFlag)
           {
@@ -515,66 +556,25 @@
           }
 
         } else {
+
           console.log('recvdata:', recvData);
+
         }
 
-        //recvdata: {"Ca": "[0.08686290758797023, 0.05061059978569413, 0.006417753707144008]", "Cp": "[7.221860887479555, 247.23022842860482, 14.583968242954178]", "data": "[3.2614205, 2.5157897, -0.038963854]", "Cpk": "[2.2033662084210492, 147.13046726119796, 13.835197712905462]", "datetime": "2018-05-16 14:40:02"}
+        //recvdata: {"sigma": [0.7472020031484365, 0.7096914050494927], "devicelist": ["38", "40"], "USL": [4.48396225692174, 4.213952213758462], "featurelist": ["power", "wind_speed"], "NUM": 50, "devicenames": ["GW0001", "GW0002"], "LSL": [-4.482461780859498, -4.302344646835449], "mean": [0.0007502380311210054, -0.04419621653849336]}
 
-        // recvdata: {"sigma": "[0.4635069240680802, 0.49475505369566564]", "USL": "[2.3626229725862364, 2.574345555144813]", "NUM": "50", "mean": "[-0.41841857182224484, -0.39418476702918076]", "LSL": "[-3.1994601162307257, -3.3627150892031743]"}
+        //recvdata: {"datetime": "2018-09-15 06:56:59", "Ca": 0.015029485605515395, "data": 0.724099685379013, "Cp": 9.77085366585799, "devid": "40", "Cpk": 8.59604642966111, "devname": "GW0002", "feature": "wind_speed"}
 
-        // recvdata: {"data": "[3.0069509, 2.535826]", "Cpk": "[-161210834100279.78, inf]", "devname": "GW0001", "Cp": "[695816536838883.6, inf]", "datetime": "2018-09-06 15:06:53", "featurelist": "['power', 'wind_speed']", "Ca": "[0.15396072915151343, 0.12337800397148196]", "devid": "38"}
-
-        //return;
-
-        //recvdata: {"datetime": "2018-09-10 11:35:01", "devname": "GW0001", "Ca": 0.06690521079932438, "feature": "power", "Cpk": 8.882326984309676, "featurelist": "['power', 'wind_speed']", "data": 2.5438406, "Cp": 19.111711881825663, "devid": "38"}
 
         if (recvData.indexOf("datetime") > -1) {
-
+            //return;
           let realtimeData = JSON.parse(recvData);
-
-          if(!this.allDeviceNames.in_array(realtimeData.devname)) {
-            this.allDeviceNames.push(realtimeData.devname);
-          }
-
-          if(!this.spcFeaturesArr.in_array(realtimeData.devname + "~" + realtimeData.feature) && this.currentViewFeaturesList[0] == this.defaultLabel)
-          {
-            this.spcFeaturesArr.push(realtimeData.devname + "~" + realtimeData.feature);
-
-            this.preDefineColorArr = [];
-
-            this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
-
-            for (var i = 0; i < this.spcFeaturesArr.length; i++)
-            {
-              this.preDefineColorArr.push(this.houxuanColors[i]);
-            }
-
-            for(var i=0;i<this.spcFeaturesArr.length;i++)
-            {
-              this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
-            }
-
-            this.bak_spcFeaturesArr = JSON.parse(JSON.stringify(this.spcFeaturesArr));
-
-            this.latestAllDateTimeArr.push([]);
-
-            this.latestAllDataArr.push([]);
-
-            this.latestAllCa.push("");
-
-            this.latestAllCp.push("");
-
-            this.latestAllCpk.push("");
-
-          }
 
           let xxx = this.spcFeaturesArr.length-1;
 
           let xxxValue = this.spcFeaturesArr[xxx]
 
           this.spcFeaturesArr.splice(xxx,1,xxxValue);
-
-          //console.log("this.spcFeaturesArr==="+this.spcFeaturesArr);
 
           let currentFeatureX = this.spcFeaturesArr.indexOf(realtimeData.devname + "~" + realtimeData.feature);
 
@@ -599,34 +599,53 @@
             this.latestAllCpk[bak_currentFeatureX] = Number(realtimeData.Cpk).toFixed(2);
           }
 
-          // if(realtimeData.devname + "~" + realtimeData.feature == "GW0001~power"){
-          //   console.log("#############=="+(realtimeData.devname + "~" + realtimeData.feature));
-          //   console.log("ca="+this.latestAllCa[currentFeatureX]);
-          //   console.log("cp="+this.latestAllCp[currentFeatureX]);
-          //   console.log("cpk="+this.latestAllCpk[currentFeatureX]);
-          //   console.log(currentFeatureX);
-          //   console.log("#############")
-          // }
-
 
           if (this.latestAllDataArr[bak_currentFeatureX].length > this.showAtTheSameTimeSpotNums) {
 
             this.latestAllDateTimeArr[bak_currentFeatureX].shift();
             this.latestAllDataArr[bak_currentFeatureX].shift();
+
           }
 
-          this.readyForDrawSPCCharts();
+          if(this.bak_spcFeaturesArr.length>8)
+          {
+            // 如果所有 Features 加起来数量大于 8 ，则执行下面的延时渲染语句
 
-          this.initFirstFlag = false;
+              if(this.recentRT == null)
+              {
+                this.recentRT = new Date(realtimeData.datetime).getTime();
+              }
 
-          this.d('tempHinterLayer').style.display = "none";
+              let rt = new Date(realtimeData.datetime).getTime();
+
+              if(rt - this.recentRT > 1001)
+              {
+                this.recentRT = rt;
+                this.readyForDrawSPCCharts();
+              }
+
+          } else {
+
+            // 如果 Features 总数很少，就直接实时显示好了，浏览器能扛得住。
+
+            this.readyForDrawSPCCharts();
+
+          }
 
         }
 
         if (recvData.indexOf("sigma") > -1) {
 
+          this.initFirstFlag = false;
+
+          this.d('tempHinterLayer').style.display = "none";
+
           clearInterval(this.cycle_send_action_id);
+
           this.cycle_send_action_id = null;
+
+          //单引号转换成双引号，小括号变成中括号
+          recvData = recvData.replace(/'/g, '"').replace(/\)/g,"]").replace(/\(/g,"[");
 
           let basicSetupData = JSON.parse(recvData);
 
@@ -634,10 +653,68 @@
 
           this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
 
-          let a_user_all_usls = basicSetupData.USL.slice(1,-1).split(",");
-          let a_user_all_lsls = basicSetupData.LSL.slice(1,-1).split(",");
-          let a_user_all_means = basicSetupData.mean.slice(1,-1).split(",");
-          let a_user_all_sigmas = basicSetupData.sigma.slice(1,-1).split(",");
+          this.spcFeaturesArr = [];
+
+          this.preDefineColorArr = [];
+
+          this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
+
+          for(var i=0;i<basicSetupData.devicenames.length;i++)
+          {
+            for(var j=0;j<basicSetupData.featurelist.length;j++)
+            //for(var j=0;j<8;j++)
+            {
+              this.spcFeaturesArr.push(basicSetupData.devicenames[i] + "~" + basicSetupData.featurelist[j]);
+            }
+          }
+
+          this.availableArr = [];
+
+          console.log("this.spcFeaturesArr=="+this.spcFeaturesArr.length);
+
+          this.bak_spcFeaturesArr = JSON.parse(JSON.stringify(this.spcFeaturesArr));
+
+          for (var i = 0; i < this.spcFeaturesArr.length; i++)
+          {
+            this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
+
+            if(i<this.houxuanColors.length)
+            {
+              this.preDefineColorArr.push(this.houxuanColors[i]);
+            } else {
+              this.preDefineColorArr.push(this.randomHexColor());
+            }
+
+            this.latestAllDateTimeArr.push([]);
+
+            this.latestAllDataArr.push([]);
+
+            this.latestAllCa.push("");
+
+            this.latestAllCp.push("");
+
+            this.latestAllCpk.push("");
+
+            this.availableArr[i] = 1;
+
+          }
+
+          this.currentViewFeaturesList = [this.spcFeaturesArr[0]];
+
+          let a_user_all_usls = basicSetupData.USL
+          let a_user_all_lsls = basicSetupData.LSL;
+          let a_user_all_means = basicSetupData.mean;
+          let a_user_all_sigmas = basicSetupData.sigma;
+
+          a_user_all_usls = a_user_all_usls.concat(a_user_all_usls);
+          a_user_all_lsls = a_user_all_lsls.concat(a_user_all_lsls);
+          a_user_all_means = a_user_all_means.concat(a_user_all_means);
+          a_user_all_sigmas = a_user_all_sigmas.concat(a_user_all_sigmas);
+
+          // console.log("a_user_all_usls="+a_user_all_usls);
+          // console.log("a_user_all_lsls="+a_user_all_lsls);
+          // console.log("a_user_all_means="+a_user_all_means);
+          // console.log("a_user_all_sigmas="+a_user_all_sigmas);
 
           this.user_all_usls = [];
           this.user_all_lsls = [];
@@ -655,8 +732,11 @@
             this.old_user_all_usls.push({num:Number(a_user_all_usls[i]).toFixed(2)});
             this.old_user_all_lsls.push({num:Number(a_user_all_lsls[i]).toFixed(2)});
           }
-
-          //console.log(JSON.stringify(this.user_all_usls));
+          //
+          // console.log("this.user_all_usls="+JSON.stringify(this.user_all_usls));
+          // console.log("this.user_all_lsls="+JSON.stringify(this.user_all_lsls));
+          // console.log("this.user_all_means="+JSON.stringify(this.user_all_means));
+          // console.log("this.user_all_sigmas="+JSON.stringify(this.user_all_sigmas));
 
           this.user_all_lcls = [];
           this.user_all_ucls = [];
@@ -676,9 +756,14 @@
             this.old_user_all_lcls.push(obj_1_old);
             this.old_user_all_ucls.push(obj_2_old);
           }
+          //
+          //
+          // console.log("this.user_all_lcls="+JSON.stringify(this.user_all_lcls));
+          // console.log("this.user_all_ucls="+JSON.stringify(this.user_all_ucls));
+          // console.log("this.old_user_all_lcls="+JSON.stringify(this.old_user_all_lcls));
+          // console.log("this.old_user_all_ucls="+JSON.stringify(this.old_user_all_ucls));
 
         }
-
 
       },
 
@@ -706,8 +791,6 @@
               targetIndex = x;
             }
           }
-
-          //console.log("000000000==="+this.old_user_all_usls[targetIndex].num+"~~"+this.current_showAtTheSameTimeSpotNums);
 
           let usl_markline_value =
             new Array(Number(this.current_showAtTheSameTimeSpotNums)).fill(this.old_user_all_usls[targetIndex].num);
@@ -740,13 +823,35 @@
 
           let pointedColor = this.preDefineColorArr[targetIndex];
 
-          currentChart.resize();
+          //currentChart.resize();
 
-          currentChart.setOption(this.getAimOptionForECharts(focusHighlightsArr,pointedColor, currentChart.getWidth()
-            - this.chartLeftMarginBlankWidth - this.chartRightMarginBlankWidth, featureName, time_data_arr,
-            real_data_arr, usl_markline_value, lsl_markline_value, mean_middle_markline_value, mean_high_markline_value, mean_low_markline_value), true);
+          let option = this.getAimOptionForECharts(
+                              focusHighlightsArr,
+                              pointedColor,
+                              currentChart.getWidth() - this.chartLeftMarginBlankWidth - this.chartRightMarginBlankWidth,
+                              featureName,
+                              time_data_arr,
+                              real_data_arr,
+                              usl_markline_value,
+                              lsl_markline_value,
+                              mean_middle_markline_value,
+                              mean_high_markline_value,
+                              mean_low_markline_value);
 
-          setTimeout(this.delay3SecondsReviseAnimation,3000,currentChart);
+          let ownerHost = this;
+
+          if(ownerHost.availableArr[k] == 1){
+            ownerHost.availableArr[k] = 0;
+            currentChart.clear();
+            currentChart.on('finished', function () {
+
+              ownerHost.availableArr[k] = 1;
+            });
+            currentChart.setOption(option,true);
+          }
+
+
+          //setTimeout(this.delay3SecondsReviseAnimation,3000,currentChart);
         }
 
         this.chartWholeShowFlag = true;
@@ -862,7 +967,8 @@
             type: 'value',
             splitLine: {
               show: false
-            }
+            },
+            scale:true
 
           }],
           series: [
@@ -1043,18 +1149,31 @@
     text-align: center;
   }
 
+  .u-besuredelsty {
+    font-family: "Microsoft YaHei";
+    font-size: 16px;
+  }
+
+  .vertical-center-modal {
+    align-items: center;
+    justify-content: center;
+  }
+
   .m-outputPrint{
+    position:fixed;
+    top:90px;
+    right:50px;
     opacity: 0;
     margin-left:10px;
     display:inline-block;
   }
-
 
   .m-selectBoxes{
     margin-right:70px;
   }
 
   .m-updateNumBtn {
+    display: inline-block;
     margin-left: 15px;
   }
 
@@ -1063,6 +1182,8 @@
   }
 
   #sonTitle {
+    width:1200px;
+    display:inline-block;
     font-size: 16px;
   }
 
@@ -1098,8 +1219,16 @@
 
   .m-spcChart {
     width: auto;
+    margin-left:150px;
+    margin-right:150px;
     height: 400px;
     text-align: center;
+  }
+
+  .m-addtionalControllBar{
+    width: auto;
+    margin-left:150px;
+    margin-right:150px;
   }
 
   .titleinner {
@@ -1127,8 +1256,7 @@
     width: auto;
     height: auto;
     margin-top: 30px;
-    margin-left: 160px;
-    margin-right: 160px;
+    text-align:center;
   }
 
 
