@@ -174,7 +174,8 @@
         }
         //this.simulateDemoFlag = true;
 
-        this.ws = new Socket('ws://lcspcgw001.neuseer.cn/');
+        this.ws = new Socket('ws://test1.yeseer.cn/');
+        //this.ws = new Socket('ws://lcspcgw001.neuseer.cn/');
         //this.ws = new Socket('ws://lcspc01.neuseer.cn/');
       } else {
         this.ws = new Socket(wsServer);
@@ -218,11 +219,6 @@
       });
 
       //this.houxuanColors = this.houxuanColors.concat(arr);
-
-      // if(this.simulateDemoFlag)
-      // {
-      //   this.simulateInitData();
-      // }
       //
       // this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
       //
@@ -379,72 +375,6 @@
         if(this.initFirstFlag) return;
         this.readyForDrawSPCCharts();
       },
-
-      // simulateInitData() {
-      //
-      //   this.spcFeaturesArr = ["GW0001~power","GW0001~wind_speed","GW0002~power","GW0002~wind_speed"];
-      //
-      //   this.bak_spcFeaturesArr = ["GW0001~power","GW0001~wind_speed","GW0002~power","GW0002~wind_speed"];
-      //   //this.spcFeaturesAddAllOptionArr = ['创建应用时配置的所有特征参数'];
-      //   this.spcFeaturesAddAllOptionArr = [this.defaultLabel];
-      //   for(var i=0;i<this.spcFeaturesArr.length;i++)
-      //   {
-      //     this.spcFeaturesAddAllOptionArr.push(this.spcFeaturesArr[i]);
-      //   }
-      //   //this.spcFeaturesAddAllOptionArr = this.spcFeaturesArr.concat(['创建应用时配置所有特征参数']);
-      //   this.currentViewFeaturesList = [this.defaultLabel];
-      //
-      //   this.showAtTheSameTimeSpotNums = 9;
-      //
-      //   this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
-      //
-      //
-      //   this.chartDateTimeArr = ["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
-      //   this.latestAllDataArr = [[-5.2424242, -30.4214124, -50.254235, 45.85687, 60.745657, 20.474747467, 55.74747476,
-      //     33.4745757, 105.74674747], [6.7476747, 32.74767475, 45.74764747, 51.74657475, -38.4775757, 99.747657757,
-      //     45.74757457, 59.7456757,
-      //     28.435323]];
-      //   this.latestAllCa = [11.3455666, 12.567890].map((item) => {return item.toFixed(2)});
-      //   this.latestAllCp = [13.45667, 20.76575].map((item) => {return item.toFixed(2)});
-      //   this.latestAllCpk = [15.41431, 18.523453253].map((item) => {return item.toFixed(2)});
-      //   this.user_all_usls = [{num:95}, {num:90}];
-      //   this.user_all_lsls = [{num:-40}, {num:-30}];
-      //   this.old_user_all_usls = [{num:95}, {num:90}];
-      //   this.old_user_all_lsls = [{num:-40}, {num:-30}];
-      //   this.user_all_means = [{num:35.63465464356}, {num:39.634564}]
-      //   this.user_all_sigmas = [{num:20.63645636}, {num:10.9999988888}]
-      //
-      //   this.user_all_lcls = [];
-      //   this.user_all_ucls = [];
-      //   this.old_user_all_lcls = [];
-      //   this.old_user_all_ucls = [];
-      //
-      //   for(var j=0;j<this.user_all_means.length;j++)
-      //   {
-      //     let obj_1 = {num:(this.user_all_means[j].num - 3*this.user_all_sigmas[j].num).toFixed(2)} // lcl 是 3倍的 sigma
-      //     let obj_2 = {num:(this.user_all_means[j].num + 3*this.user_all_sigmas[j].num).toFixed(2)} // ucl 是 3倍的 sigma
-      //     this.user_all_lcls.push(obj_1);
-      //     this.user_all_ucls.push(obj_2);
-      //     this.old_user_all_lcls.push(JSON.parse(JSON.stringify(obj_1)));
-      //     this.old_user_all_ucls.push(JSON.parse(JSON.stringify(obj_2)));
-      //   }
-      //
-      //   this.d('tempHinterLayer').style.display = "none";
-      //
-      //   this.preDefineColorArr = [];
-      //   for (var i = 0; i < this.spcFeaturesArr.length; i++) {
-      //     //this.preDefineColorArr.push(this.randomHexColor());
-      //     if(i>=this.houxuanColors.length)
-      //     {
-      //       this.preDefineColorArr.push(this.houxuanColors[i]);
-      //     } else {
-      //       this.preDefineColorArr.push(this.randomHexColor());
-      //     }
-      //
-      //   }
-      //
-      //   setTimeout(this.readyForDrawSPCCharts, 1000);
-      // },
 
        randomHexColor() { //随机生成十六进制颜色
          return '#' + ('00000' + (Math.random() * 0x1000000 << 0).toString(16)).substr(-6);
@@ -649,6 +579,8 @@
 
           let basicSetupData = JSON.parse(recvData);
 
+          //basicSetupData.featurenames = ['液压站压力','液压泵运行','液压站温度'];
+
           this.showAtTheSameTimeSpotNums = Number(basicSetupData.NUM);
 
           this.current_showAtTheSameTimeSpotNums = this.showAtTheSameTimeSpotNums;
@@ -664,7 +596,13 @@
             for(var j=0;j<basicSetupData.featurelist.length;j++)
             //for(var j=0;j<8;j++)
             {
-              this.spcFeaturesArr.push(basicSetupData.devicenames[i] + "~" + basicSetupData.featurelist[j]);
+              if(basicSetupData.featurenames != null)
+              {
+                this.spcFeaturesArr.push(basicSetupData.devicenames[i] + "~" + basicSetupData.featurenames[j]);
+              } else {
+                this.spcFeaturesArr.push(basicSetupData.devicenames[i] + "~" + basicSetupData.featurelist[j]);
+              }
+
             }
           }
 
