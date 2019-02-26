@@ -44,14 +44,14 @@
             <span class="u-onec-label">Cpk: {{latestAllCpk[transferRealIndex(item)]}}</span>
           </span>
           <span class="m-usl-lsl-label">
-                自定义 —— LSL: <Input v-model="user_all_lsls[transferRealIndex(item)].num" style="width: 60px;margin-right:20px"
+                自定义 —— LSL: <Input v-model="user_all_lsls[transferRealIndex(item)].num" style="width: 70px;margin-right:20px"
                                    @on-focus="selectHighlightInputContent" number></Input>USL:
-            <Input v-model="user_all_usls[transferRealIndex(item)].num" style="width: 60px;margin-right:20px" @on-focus="selectHighlightInputContent" number></Input>
+            <Input v-model="user_all_usls[transferRealIndex(item)].num" style="width: 70px;margin-right:20px" @on-focus="selectHighlightInputContent" number></Input>
             LCL:
-            <Input v-model="user_all_lcls[transferRealIndex(item)].num" style="width: 60px;margin-right:20px"
+            <Input v-model="user_all_lcls[transferRealIndex(item)].num" style="width: 70px;margin-right:20px"
                    @on-focus="selectHighlightInputContent" number></Input>
             UCL:
-            <Input v-model="user_all_ucls[transferRealIndex(item)].num" style="width: 60px" @on-focus="selectHighlightInputContent" number></Input>
+            <Input v-model="user_all_ucls[transferRealIndex(item)].num" style="width: 70px" @on-focus="selectHighlightInputContent" number></Input>
               <Button
                 size="default" type="primary" class="m-updateUSLAndLSLBtn" @click="echoUSLAndSoOnParasChanged(transferRealIndex(item))">
                 点击更新
@@ -141,7 +141,8 @@
         availableArr:[],
         recentRT:null,
         ifNeedShowAllFeaturesFlag:false,
-        bak_currentViewFeaturesList:[]
+        bak_currentViewFeaturesList:[],
+        rememerBasicSetupObj:{}
       }
     },
     watch: {
@@ -171,10 +172,13 @@
       if (host.indexOf("localhost:") > -1 || host === '') {
         this.ws = new Object();
         this.ws.send = function () {
+
         }
+
         //this.simulateDemoFlag = true;
 
-        this.ws = new Socket('ws://test1.yeseer.cn/');
+        this.ws = new Socket('ws://test001.yeseer.cn/');
+        //
         //this.ws = new Socket('ws://lcspcgw001.neuseer.cn/');
         //this.ws = new Socket('ws://lcspc01.neuseer.cn/');
       } else {
@@ -480,6 +484,9 @@
 
         if(recvData.indexOf("datetime") > -1)
         {
+          let x = JSON.parse(recvData);
+          x["feature"] = this.rememerBasicSetupObj.featurenames[this.rememerBasicSetupObj.featurelist.indexOf(x.feature)];
+          recvData = JSON.stringify(x);
           if(this.printRealTimeToControllPanelFlag)
           {
             console.log('recvdata:', recvData);
@@ -506,9 +513,13 @@
 
           this.spcFeaturesArr.splice(xxx,1,xxxValue);
 
-          let currentFeatureX = this.spcFeaturesArr.indexOf(realtimeData.devname + "~" + realtimeData.feature);
+          //let fname = this.rememerBasicSetupObj.featurenames[this.rememerBasicSetupObj.featurelist.indexOf(realtimeData.feature)];
 
-          let bak_currentFeatureX = this.bak_spcFeaturesArr.indexOf(realtimeData.devname + "~" + realtimeData.feature);
+          let fname = realtimeData.feature;
+
+          let currentFeatureX = this.spcFeaturesArr.indexOf(realtimeData.devname + "~" + fname);
+
+          let bak_currentFeatureX = this.bak_spcFeaturesArr.indexOf(realtimeData.devname + "~" + fname);
 
           //console.log("currentFeatureX==="+currentFeatureX);
 
@@ -578,6 +589,8 @@
           recvData = recvData.replace(/'/g, '"').replace(/\)/g,"]").replace(/\(/g,"[");
 
           let basicSetupData = JSON.parse(recvData);
+
+          this.rememerBasicSetupObj = JSON.parse(recvData);
 
           //basicSetupData.featurenames = ['液压站压力','液压泵运行','液压站温度'];
 
@@ -663,10 +676,17 @@
 
           for(var i=0;i<a_user_all_usls.length;i++)
           {
+            // this.user_all_usls.push({num:Number(a_user_all_usls[i]).toFixed(2)});
+            // this.user_all_lsls.push({num:Number(a_user_all_lsls[i]).toFixed(2)});
+            // this.user_all_means.push({num:Number(a_user_all_means[i]).toFixed(2)});
+            // this.user_all_sigmas.push({num:Number(a_user_all_sigmas[i]).toFixed(2)});
+            // this.old_user_all_usls.push({num:Number(a_user_all_usls[i]).toFixed(2)});
+            // this.old_user_all_lsls.push({num:Number(a_user_all_lsls[i]).toFixed(2)});
+
             this.user_all_usls.push({num:Number(a_user_all_usls[i]).toFixed(2)});
             this.user_all_lsls.push({num:Number(a_user_all_lsls[i]).toFixed(2)});
-            this.user_all_means.push({num:Number(a_user_all_means[i]).toFixed(2)});
-            this.user_all_sigmas.push({num:Number(a_user_all_sigmas[i]).toFixed(2)});
+            this.user_all_means.push({num:Number(a_user_all_means[i]).toFixed(5)});
+            this.user_all_sigmas.push({num:Number(a_user_all_sigmas[i]).toFixed(5)});
             this.old_user_all_usls.push({num:Number(a_user_all_usls[i]).toFixed(2)});
             this.old_user_all_lsls.push({num:Number(a_user_all_lsls[i]).toFixed(2)});
           }
